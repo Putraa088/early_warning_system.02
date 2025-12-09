@@ -1,8 +1,8 @@
-# app.py - TAMBAHKAN SETELAH st.set_page_config()
-import sys
-import os
+# app.py - VERSI DIPERBAIKI
+import streamlit as st
 
 # ==================== HARUS DULUAN! ====================
+# SET_PAGE_CONFIG HARUS DI BARIS PERTAMA SETELAH IMPORT STREAMLIT
 st.set_page_config(
     page_title="Sistem Peringatan Dini Banjir",
     page_icon="🌊",
@@ -10,21 +10,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ==================== FIX PYTHON PATH ====================
-current_dir = os.path.dirname(os.path.abspath(__file__))
+# ==================== SETUP PATH DAN IMPORTS ====================
+import sys
+import os
 
-# Tambahkan root directory ke path
+# Fix Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-# Tambahkan juga subdirectories ke path
+# Tambahkan subdirectories ke path
 for folder in ['controllers', 'models', 'views']:
     folder_path = os.path.join(current_dir, folder)
     if os.path.exists(folder_path) and folder_path not in sys.path:
         sys.path.insert(0, folder_path)
-
-# Debug (opsional, bisa dihapus setelah berhasil)
-# st.write(f"Python path: {sys.path}")
 
 # ==================== INIT DATABASE ====================
 # Pastikan database sudah ada
@@ -38,14 +37,23 @@ if not os.path.exists('flood_system.db'):
         st.error(f"❌ Gagal inisialisasi database: {e}")
         st.stop()
 
-# ==================== IMPORTS ====================
+# ==================== IMPORTS CONTROLLERS ====================
 try:
     from controllers.VisitorController import VisitorController
     from controllers.FloodReportController import FloodReportController
     from controllers.RealTimeDataController import RealTimeDataController
 except ImportError as e:
     st.error(f"❌ Import Error Controller: {e}")
-    st.stop()
+    # Fallback untuk testing
+    st.info("Menggunakan mode fallback...")
+    class VisitorController:
+        def track_visit(self, page): pass
+        def get_visitor_stats(self): return {}
+    class FloodReportController:
+        def submit_report(self, *args): return False, "Fallback"
+        def get_today_reports(self): return []
+    class RealTimeDataController:
+        def get_comprehensive_data(self): return []
 
 # Import views
 try:
@@ -58,7 +66,14 @@ try:
     from views.statistical_analysis import show_statistical_analysis
 except ImportError as e:
     st.error(f"❌ Import Error Views: {e}")
-    st.stop()
+    # Fallback functions
+    def show_visitor_stats(*args): st.info("Visitor stats not available")
+    def show_flood_report_form(*args): st.info("Report form not available")
+    def show_current_month_reports(*args): st.info("Reports not available")
+    def show_monthly_reports_summary(*args): st.info("Monthly reports not available")
+    def show_prediction_dashboard(*args): st.info("Prediction dashboard not available")
+    def show_ai_analysis(): st.info("AI analysis not available")
+    def show_statistical_analysis(): st.info("Statistical analysis not available")
 
 # ==================== CSS TEMA HITAM ====================
 st.markdown("""
@@ -248,14 +263,23 @@ st.markdown("""
 
 # ==================== INIT CONTROLLERS ====================
 if 'controllers_initialized' not in st.session_state:
-    st.session_state.visitor_controller = VisitorController()
-    st.session_state.flood_controller = FloodReportController()
-    st.session_state.realtime_controller = RealTimeDataController()
-    st.session_state.controllers_initialized = True
+    try:
+        st.session_state.visitor_controller = VisitorController()
+        st.session_state.flood_controller = FloodReportController()
+        st.session_state.realtime_controller = RealTimeDataController()
+        st.session_state.controllers_initialized = True
+    except:
+        st.session_state.controllers_initialized = False
 
-visitor_controller = st.session_state.visitor_controller
-flood_controller = st.session_state.flood_controller
-realtime_controller = st.session_state.realtime_controller
+if st.session_state.controllers_initialized:
+    visitor_controller = st.session_state.visitor_controller
+    flood_controller = st.session_state.flood_controller
+    realtime_controller = st.session_state.realtime_controller
+else:
+    # Fallback controllers
+    visitor_controller = VisitorController()
+    flood_controller = FloodReportController()
+    realtime_controller = RealTimeDataController()
 
 # ==================== SIDEBAR NAVIGATION DENGAN KONTAK ====================
 def setup_sidebar():
@@ -277,13 +301,13 @@ def setup_sidebar():
         
         # Menu items
         menu_items = [
-            (" Home", "Home"),
-            (" Lapor Banjir", "Lapor Banjir"),
-            (" Laporan Harian", "Laporan Harian"),
-            (" Rekapan Bulanan", "Rekapan Bulanan"),
-            (" Prediksi Real-time", "Prediksi Banjir"),
-            (" Analisis AI", "Analisis ANN"),
-            (" Analisis Statistik", "Analisis Gumbel")
+            ("🏠 Home", "Home"),
+            ("📝 Lapor Banjir", "Lapor Banjir"),
+            ("📊 Laporan Harian", "Laporan Harian"),
+            ("📈 Rekapan Bulanan", "Rekapan Bulanan"),
+            ("🔮 Prediksi Real-time", "Prediksi Banjir"),
+            ("🤖 Analisis AI", "Analisis ANN"),
+            ("📊 Analisis Statistik", "Analisis Gumbel")
         ]
         
         # Display menu
@@ -295,7 +319,7 @@ def setup_sidebar():
         
         st.markdown("---")
         
-        # ==================== KONTAK KAMI - STREAMLIT NATIVE ====================
+        # ==================== KONTAK KAMI ====================
         st.markdown("### 📞 KONTAK KAMI")
         
         # Lokasi
@@ -338,7 +362,7 @@ def setup_sidebar():
         st.markdown("""
         <div style="text-align: center; color: #666666; font-size: 0.8rem; padding: 10px;">
             <p>© 2024 Sistem Peringatan Dini Banjir</p>
-            <p>v2.0 - Tema Hitam</p>
+            <p>v2.0</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -360,7 +384,7 @@ def show_homepage():
     with col1:
         st.markdown("""
         <div class="card">
-            <h3> KECERDASAN BUATAN</h3>
+            <h3>🤖 KECERDASAN BUATAN</h3>
             <p>Neural Network untuk prediksi real-time berdasarkan pola data historis.</p>
             <ul>
                 <li>Analisis curah hujan</li>
@@ -374,7 +398,7 @@ def show_homepage():
     with col2:
         st.markdown("""
         <div class="card">
-            <h3> ANALISIS STATISTIK</h3>
+            <h3>📊 ANALISIS STATISTIK</h3>
             <p>Distribusi Gumbel untuk analisis nilai ekstrem dan periode ulang.</p>
             <ul>
                 <li>Probabilitas kejadian</li>
@@ -384,13 +408,6 @@ def show_homepage():
             </ul>
         </div>
         """, unsafe_allow_html=True)
-    
-    # Visitor Statistics
-    try:
-        stats = visitor_controller.get_visitor_stats()
-        show_visitor_stats(stats)
-    except:
-        pass
 
 def show_flood_report_page():
     """Display flood report page"""
@@ -446,27 +463,16 @@ def show_gumbel_analysis_page():
     """Display statistical analysis page"""
     st.markdown("""
     <div class="card">
-        <h2>📈 ANALISIS DISTRIBUSI GUMBEL</h2>
+        <h2>📊 ANALISIS DISTRIBUSI GUMBEL</h2>
         <p>Analisis statistik untuk prediksi kejadian ekstrem.</p>
     </div>
     """, unsafe_allow_html=True)
     show_statistical_analysis()
 
-# ==================== TRACK VISIT ====================
-def track_page_visit(page_title):
-    """Track page visits for statistics"""
-    try:
-        visitor_controller.track_visit(page_title)
-    except:
-        pass
-
 # ==================== MAIN APP ====================
 def main():
     # Setup sidebar navigation
     setup_sidebar()
-    
-    # Track page visit
-    track_page_visit(st.session_state.current_page)
     
     # Route to appropriate page
     page_handlers = {
@@ -487,5 +493,4 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     
-
     main()
