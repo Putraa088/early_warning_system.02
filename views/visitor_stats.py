@@ -52,7 +52,7 @@ def show_visitor_stats(stats):
     st.markdown('<div class="visitor-stats-container">', unsafe_allow_html=True)
     
     # Header
-    st.markdown('<div class="stats-header"><h3>📊 STATISTIK PENGUNJUNG</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="stats-header"><h3> STATISTIK PENGUNJUNG</h3></div>', unsafe_allow_html=True)
     
     # Stats grid
     st.markdown('<div class="stats-grid">', unsafe_allow_html=True)
