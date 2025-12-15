@@ -1,9 +1,9 @@
 # controllers/RealTimeDataController.py
 import streamlit as st
 
-# ✅ IMPORT YANG BENAR (model_ann.py ada di ROOT)
+# ✅ IMPORT YANG DIPERLUKAN SAJA
 from model_ann import predict_flood_ann
-from gumbel_distribution import predict_flood_gumbel
+# Menghapus import gumbel_distribution karena tidak digunakan di controller ini
 
 class RealTimeDataController:
     def __init__(self):
