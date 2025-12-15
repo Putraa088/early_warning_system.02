@@ -750,13 +750,13 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
         st.markdown("<p style='text-align: center; color: #9ca3af; font-size: 0.9rem;'>TINGGI<br>(0.8-1.0)</p>", unsafe_allow_html=True)
     
     # ============== DETAIL PARAMETER ==============
-    with st.expander("📊 Detail Parameter Input", expanded=False):
-        st.markdown("### 📈 Parameter yang Dimasukkan")
+    with st.expander(" Detail Parameter Input", expanded=False):
+        st.markdown("###  Parameter yang Dimasukkan")
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric("🌧️ Curah Hujan", f"{rainfall} mm")
+            st.metric(" Curah Hujan", f"{rainfall} mm")
             if rainfall > 200:
                 st.error(">200 mm: HUJAN SANGAT LEBAT")
             elif rainfall > 100:
@@ -765,7 +765,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<100 mm: HUJAN NORMAL")
         
         with col2:
-            st.metric("💧 Tinggi Air", f"{water_level} mdpl")
+            st.metric(" Tinggi Air", f"{water_level} mdpl")
             if water_level > 130:
                 st.error(">130 mdpl: TINGGI")
             elif water_level > 110:
@@ -774,7 +774,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<110 mdpl: NORMAL")
         
         with col3:
-            st.metric("💨 Kelembapan", f"{humidity}%")
+            st.metric(" Kelembapan", f"{humidity}%")
             if humidity > 80:
                 st.warning(">80%: SANGAT LEMBAP")
             elif humidity > 60:
@@ -784,7 +784,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
         
         with col4:
             temp_avg = (temp_min + temp_max) / 2
-            st.metric("🌡️ Suhu Rata-rata", f"{temp_avg:.1f}°C")
+            st.metric(" Suhu Rata-rata", f"{temp_avg:.1f}°C")
             st.caption(f"Min: {temp_min}°C | Max: {temp_max}°C")
             if temp_avg > 30:
                 st.error(">30°C: PANAS")
