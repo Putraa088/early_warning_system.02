@@ -34,6 +34,12 @@ class FloodReportModel:
                 )
             ''')
             
+            # Create index untuk sorting yang optimal
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_report_datetime 
+                ON flood_reports(report_date DESC, report_time DESC, created_at DESC)
+            ''')
+            
             conn.commit()
             conn.close()
             print("✅ Database flood_reports initialized successfully")
@@ -50,7 +56,7 @@ class FloodReportModel:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Gunakan tanggal hari ini
+            # Gunakan tanggal dan waktu saat ini
             today_date = datetime.now().strftime('%Y-%m-%d')
             current_time = datetime.now().strftime('%H:%M:%S')
             
@@ -72,27 +78,13 @@ class FloodReportModel:
             return None
 
     def get_today_reports_count_by_ip(self, ip_address):
-        """Get count of today's reports by IP address - FIXED & WORKING"""
+        """Get count of today's reports by IP address"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Tanggal hari ini
             today_date = datetime.now().strftime('%Y-%m-%d')
             
-            # Debug: Tampilkan semua data hari ini
-            cursor.execute('''
-                SELECT id, address, report_date, ip_address FROM flood_reports 
-                WHERE report_date = ?
-            ''', (today_date,))
-            
-            all_today = cursor.fetchall()
-            print(f"📋 All reports today ({today_date}): {len(all_today)} entries")
-            
-            for report in all_today:
-                print(f"    ID:{report[0]}, IP:{report[3]}, Addr:{report[1][:20]}...")
-            
-            # Hitung untuk IP tertentu
             cursor.execute('''
                 SELECT COUNT(*) FROM flood_reports 
                 WHERE report_date = ? AND ip_address = ?
@@ -109,7 +101,7 @@ class FloodReportModel:
             return 0
 
     def get_today_reports(self):
-        """Get all flood reports for today"""
+        """Get all flood reports for today - TERBARU DI ATAS"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -119,17 +111,20 @@ class FloodReportModel:
             cursor.execute('''
                 SELECT * FROM flood_reports 
                 WHERE report_date = ?
-                ORDER BY created_at DESC
+                ORDER BY 
+                    report_time DESC,
+                    created_at DESC,
+                    id DESC
             ''', (today_date,))
             
             reports = cursor.fetchall()
             conn.close()
             
             columns = ['id', 'address', 'flood_height', 'reporter_name', 'reporter_phone', 
-                      'photo_path', 'ip_address', 'report_date', 'report_time', 'created_at', 'status']
+                    'photo_path', 'ip_address', 'report_date', 'report_time', 'created_at', 'status']
             
             result = [dict(zip(columns, report)) for report in reports]
-            print(f"📄 Today's reports: {len(result)} found")
+            print(f"📄 Today's reports: {len(result)} found (newest first)")
             return result
             
         except Exception as e:
@@ -137,47 +132,65 @@ class FloodReportModel:
             return []
 
     def get_month_reports(self):
-        """Get all flood reports for current month"""
+        """Get all flood reports for current month - TERBARU DI ATAS"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
             current_month = datetime.now().strftime('%Y-%m')
             
+            # ORDER BY: tanggal DESC, waktu DESC, created_at DESC, id DESC
             cursor.execute('''
                 SELECT * FROM flood_reports 
                 WHERE strftime('%Y-%m', report_date) = ?
-                ORDER BY report_date DESC, created_at DESC
+                ORDER BY 
+                    report_date DESC,
+                    report_time DESC,
+                    created_at DESC,
+                    id DESC
             ''', (current_month,))
             
             reports = cursor.fetchall()
             conn.close()
             
             columns = ['id', 'address', 'flood_height', 'reporter_name', 'reporter_phone', 
-                      'photo_path', 'ip_address', 'report_date', 'report_time', 'created_at', 'status']
+                    'photo_path', 'ip_address', 'report_date', 'report_time', 'created_at', 'status']
             
-            return [dict(zip(columns, report)) for report in reports]
+            result = [dict(zip(columns, report)) for report in reports]
+            
+            # Debug: tampilkan urutan
+            if result:
+                print(f"📅 Month reports ({current_month}): {len(result)} found")
+                print(f"   First (newest): ID:{result[0]['id']} | {result[0]['report_date']} {result[0]['report_time']}")
+                if len(result) > 1:
+                    print(f"   Last (oldest): ID:{result[-1]['id']} | {result[-1]['report_date']} {result[-1]['report_time']}")
+            
+            return result
             
         except Exception as e:
             print(f"❌ Error getting month reports: {e}")
             return []
 
     def get_all_reports(self):
-        """Get all flood reports"""
+        """Get all flood reports - TERBARU DI ATAS"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
                 SELECT * FROM flood_reports 
-                ORDER BY report_date DESC, created_at DESC
+                ORDER BY 
+                    report_date DESC,
+                    report_time DESC,
+                    created_at DESC,
+                    id DESC
             ''')
             
             reports = cursor.fetchall()
             conn.close()
             
             columns = ['id', 'address', 'flood_height', 'reporter_name', 'reporter_phone', 
-                      'photo_path', 'ip_address', 'report_date', 'report_time', 'created_at', 'status']
+                    'photo_path', 'ip_address', 'report_date', 'report_time', 'created_at', 'status']
             return [dict(zip(columns, report)) for report in reports]
             
         except Exception as e:
