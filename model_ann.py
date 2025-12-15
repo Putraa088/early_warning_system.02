@@ -58,7 +58,7 @@ def predict_flood_ann(rainfall, water_level, humidity, temperature):
         return {
             'risk_level': round(risk_level, 3),
             'status': status,
-            'message': f'Prediksi ANN: {message}',
+            'message': message,  # Hanya pesan tanpa prefix "Prediksi ANN:"
             'parameters_used': {
                 'weights': weights.tolist(),
                 'normalization_factors': normalization_factors.tolist(),
@@ -153,7 +153,7 @@ def predict_flood_ann_legacy(rainfall, water_level, humidity, temperature):
         return {
             'risk_level': round(risk_level, 3),
             'status': status,
-            'message': f'Prediksi ANN: {message}'
+            'message': message
         }
     except Exception as e:
         return {
