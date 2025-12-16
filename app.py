@@ -440,7 +440,6 @@ st.markdown("### Tentang Sistem")
 st.markdown(
     """
     <div class="feature-card">
-        <h3>KECERDASAN BUATAN</h3>
         <p>Prediksi real-time menggunakan neural network dengan analisis data historis untuk akurasi maksimal.</p>
     </div>
     """,
@@ -823,6 +822,7 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
+
 
 
 
