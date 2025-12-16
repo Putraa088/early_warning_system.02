@@ -1,118 +1,105 @@
 import streamlit as st
 
 def show_flood_report_form(controller):
-    """Show flood report form with dropdown for flood height"""
+    """Display flood report form with simple design"""
     
-    st.markdown("### Formulir Laporan Banjir")
-    
-    with st.form("flood_report_form"):
-        # Input alamat
-        address = st.text_area(
-            "Lokasi Kejadian*",
-            placeholder="Contoh: Jl. Diponegoro No. 52, Salatiga, Jawa Tengah",
-            help="Sebutkan lokasi kejadian banjir dengan jelas",
-            value="Somopuro Lor"
-        )
+    with st.container():
+        st.markdown("### Isi Form Laporan")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # DROPDOWN untuk tinggi banjir dengan default value
-            flood_options = {
-                "": 0,  # Pilihan kosong
-                "Rendah (10-30 cm)": 20,
-                "Sedang (31-70 cm)": 50,
-                "Tinggi (71-150 cm)": 100,
-                "Sangat Tinggi (>150 cm)": 200
-            }
+        with st.form("flood_report_form"):
+            # Form fields
+            col1, col2 = st.columns(2)
             
-            flood_height_text = st.selectbox(
-                "Tinggi Banjir*",
-                options=list(flood_options.keys()),
-                help="Pilih kategori tinggi banjir",
-                index=0
+            with col1:
+                address = st.text_input(
+                    "Alamat Lengkap",
+                    placeholder="Jl/gang/kelurahan/kecamatan",
+                    help="Masukkan alamat lengkap kejadian banjir"
+                )
+                
+                # Dropdown tinggi banjir seperti contoh
+                flood_height = st.selectbox(
+                    "Tinggi Banjir",
+                    ["Pilih tinggi banjir", "Setinggi mata kaki", "Setinggi betis", "Setinggi lutut", "Lebih dari lutut"]
+                )
+            
+            with col2:
+                reporter_name = st.text_input(
+                    "Nama Pelapor",
+                    placeholder="Nama lengkap Anda"
+                )
+                
+                # PERUBAHAN: Nomor Telepon (tanpa "Opsional")
+                reporter_phone = st.text_input(
+                    "Nomor Telepon",
+                    placeholder="0812-3456-7890"
+                )
+            
+            # PERUBAHAN: Foto wajib tanpa teks WAJIB di bold
+            photo_file = st.file_uploader(
+                "Unggah Foto",
+                type=['jpg', 'jpeg', 'png'],
+                help="Upload foto kondisi banjir"
             )
-        
-        with col2:
-            reporter_name = st.text_input(
-                "Nama Pelapor*",
-                placeholder="Nama lengkap pelapor",
-                help="Nama Anda sebagai pelapor",
-                value="Settings! Betis"
-            )
-        
-        # PERUBAHAN 1: Nomor Telepon menjadi WAJIB
-        reporter_phone = st.text_input(
-            "Nomor Telepon*",  # UBAH: hapus (Opsional)
-            placeholder="081234567890",
-            help="Nomor telepon untuk konfirmasi (wajib diisi)",
-            value="883719843916"
-        )
-        
-        # PERUBAHAN 2: Foto Kejadian menjadi WAJIB
-        photo_file = st.file_uploader(
-            "Foto Kejadian (WAJIB)*",  # UBAH: (WAJIB)*
-            type=['jpg', 'jpeg', 'png', 'gif'],
-            help="Upload foto kejadian banjir (wajib diisi)"
-        )
-        
-        # Terms and conditions
-        st.markdown("---")
-        agreed = st.checkbox(
-            "Saya menyetujui bahwa data yang saya berikan adalah benar dan dapat dipertanggungjawabkan*"
-        )
-        
-        # Submit button
-        submit_col1, submit_col2, submit_col3 = st.columns([1, 2, 1])
-        with submit_col2:
-            submitted = st.form_submit_button(
-                "📤 KIRIM LAPORAN",
-                use_container_width=True,
-                type="primary",
-                disabled=not agreed
-            )
-        
-        if submitted:
-            # VALIDASI: Cek semua field wajib
-            error_messages = []
             
-            if not address or address.strip() == "":
-                error_messages.append(" Lokasi kejadian harus diisi")
+            # Submit button
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                submitted = st.form_submit_button(
+                    "Kirim Laporan",
+                    type="primary",
+                    use_container_width=True
+                )
             
-            if flood_height <= 0:
-                error_messages.append(" Pilih tinggi banjir")
-            
-            if not reporter_name or reporter_name.strip() == "":
-                error_messages.append(" Nama pelapor harus diisi")
-            
-            # VALIDASI NOMOR TELEPON (WAJIB)
-            if not reporter_phone or reporter_phone.strip() == "":
-                error_messages.append(" Nomor telepon harus diisi")
-            elif not reporter_phone.strip().isdigit() or len(reporter_phone.strip()) < 10:
-                error_messages.append(" Nomor telepon harus angka minimal 10 digit")
-            
-            # VALIDASI FOTO (WAJIB)
-            if photo_file is None:
-                error_messages.append(" Foto kejadian wajib diupload")
-            
-            if error_messages:
-                for error in error_messages:
-                    st.error(error)
-            else:
-                with st.spinner("Mengirim laporan..."):
-                    success, message = controller.submit_report(
-                        address=address.strip(),
-                        flood_height=float(flood_height),
-                        reporter_name=reporter_name.strip(),
-                        reporter_phone=reporter_phone.strip(),
-                        photo_file=photo_file
-                    )
-                    
-                    if success:
-                        st.success(message)
-                        st.balloons()
-                        # Auto reset form
-                        st.rerun()
-                    else:
-                        st.error(message)
-
+            if submitted:
+                # Validation
+                errors = []
+                
+                if not address or address.strip() == "":
+                    errors.append("Alamat harus diisi")
+                
+                if flood_height == "Pilih tinggi banjir":
+                    errors.append("Pilih tinggi banjir")
+                
+                if not reporter_name or reporter_name.strip() == "":
+                    errors.append("Nama pelapor harus diisi")
+                
+                # PERUBAHAN: Validasi nomor telepon (WAJIB)
+                if not reporter_phone or reporter_phone.strip() == "":
+                    errors.append("Nomor telepon harus diisi")
+                
+                # PERUBAHAN: Validasi foto (WAJIB)
+                if photo_file is None:
+                    errors.append("Foto harus diunggah")
+                
+                if errors:
+                    for error in errors:
+                        st.error(error)
+                else:
+                    with st.spinner("Mengirim laporan..."):
+                        try:
+                            # Konversi tinggi banjir dari teks ke angka
+                            height_mapping = {
+                                "Setinggi mata kaki": 20,
+                                "Setinggi betis": 40,
+                                "Setinggi lutut": 60,
+                                "Lebih dari lutut": 100
+                            }
+                            
+                            height_value = height_mapping.get(flood_height, 0)
+                            
+                            success, message = controller.submit_report(
+                                address=address,
+                                flood_height=height_value,
+                                reporter_name=reporter_name,
+                                reporter_phone=reporter_phone,
+                                photo_file=photo_file
+                            )
+                            
+                            if success:
+                                st.success(message)
+                                st.info("Data Anda telah dicatat. Terima kasih atas laporannya.")
+                            else:
+                                st.error(message)
+                        except Exception as e:
+                            st.error(f"Terjadi kesalahan: {str(e)}")
