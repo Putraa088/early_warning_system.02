@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 import os
 
 class FloodReportModel:
@@ -13,11 +13,11 @@ class FloodReportModel:
         return sqlite3.connect(self.db_path)
     
     def init_database(self):
-        """Initialize database tables - PERBAIKAN: Hapus index creation"""
+        """Initialize database tables"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            # Create flood_reports table saja
+            # Create flood_reports table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS flood_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,18 +32,11 @@ class FloodReportModel:
                 )
             ''')
             
-            # HAPUS pembuatan index untuk menghindari error
-            # cursor.execute('''
-            #     CREATE INDEX IF NOT EXISTS idx_timestamp ON flood_reports(timestamp)
-            # ''')
-            # cursor.execute('''
-            #     CREATE INDEX IF NOT EXISTS idx_ip ON flood_reports(ip_address)
-            # ''')
-            
             conn.commit()
     
     def get_wib_time(self):
         """Get current time in WIB (UTC+7)"""
+        from datetime import timezone, timedelta
         # Get UTC time
         utc_now = datetime.now(timezone.utc)
         # Convert to WIB (UTC+7)
@@ -54,6 +47,7 @@ class FloodReportModel:
                       reporter_phone=None, photo_path=None, ip_address=None):
         """Create new flood report with WIB timestamp"""
         try:
+            # Gunakan waktu WIB
             wib_time = self.get_wib_time()
             timestamp = wib_time.strftime("%Y-%m-%d %H:%M:%S")
             
@@ -73,60 +67,54 @@ class FloodReportModel:
             return None
     
     def get_today_reports(self):
-        """Get today's reports in WIB time"""
+        """Get today's reports - TANPA perubahan"""
         try:
-            wib_time = self.get_wib_time()
-            today_date = wib_time.strftime("%Y-%m-%d")
-            
+            today = datetime.now().strftime("%Y-%m-%d")
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
                     SELECT * FROM flood_reports 
                     WHERE date(timestamp) = ?
                     ORDER BY timestamp DESC
-                ''', (today_date,))
+                ''', (today,))
                 return cursor.fetchall()
         except Exception as e:
             print(f"❌ Error getting today's reports: {e}")
             return []
     
     def get_today_reports_count_by_ip(self, ip_address):
-        """Count today's reports by IP address"""
+        """Count today's reports by IP address - TANPA perubahan"""
         try:
-            wib_time = self.get_wib_time()
-            today_date = wib_time.strftime("%Y-%m-%d")
-            
+            today = datetime.now().strftime("%Y-%m-%d")
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
                     SELECT COUNT(*) FROM flood_reports 
                     WHERE ip_address = ? AND date(timestamp) = ?
-                ''', (ip_address, today_date))
+                ''', (ip_address, today))
                 return cursor.fetchone()[0]
         except Exception as e:
             print(f"❌ Error counting today's reports by IP: {e}")
             return 0
     
     def get_month_reports(self):
-        """Get this month's reports in WIB time"""
+        """Get this month's reports - TANPA perubahan"""
         try:
-            wib_time = self.get_wib_time()
-            year_month = wib_time.strftime("%Y-%m")
-            
+            current_month = datetime.now().strftime("%Y-%m")
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
                     SELECT * FROM flood_reports 
                     WHERE strftime('%Y-%m', timestamp) = ?
                     ORDER BY timestamp DESC
-                ''', (year_month,))
+                ''', (current_month,))
                 return cursor.fetchall()
         except Exception as e:
             print(f"❌ Error getting month's reports: {e}")
             return []
     
     def get_all_reports(self):
-        """Get all reports"""
+        """Get all reports - TANPA perubahan"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -140,11 +128,9 @@ class FloodReportModel:
             return []
     
     def get_monthly_statistics(self):
-        """Get monthly statistics"""
+        """Get monthly statistics - TANPA perubahan"""
         try:
-            wib_time = self.get_wib_time()
-            year_month = wib_time.strftime("%Y-%m")
-            
+            current_month = datetime.now().strftime("%Y-%m")
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
@@ -152,21 +138,21 @@ class FloodReportModel:
                 cursor.execute('''
                     SELECT COUNT(*) FROM flood_reports 
                     WHERE strftime('%Y-%m', timestamp) = ?
-                ''', (year_month,))
+                ''', (current_month,))
                 total_reports = cursor.fetchone()[0]
                 
                 # Average flood height
                 cursor.execute('''
                     SELECT AVG(flood_height) FROM flood_reports 
                     WHERE strftime('%Y-%m', timestamp) = ?
-                ''', (year_month,))
+                ''', (current_month,))
                 avg_flood_height = cursor.fetchone()[0] or 0
                 
                 return {
                     'total_reports': total_reports,
                     'avg_flood_height': round(avg_flood_height, 2),
-                    'month': year_month
+                    'month': current_month
                 }
         except Exception as e:
             print(f"❌ Error getting monthly statistics: {e}")
-            return {'total_reports': 0, 'avg_flood_height': 0, 'month': year_month}
+            return {'total_reports': 0, 'avg_flood_height': 0, 'month': current_month}
