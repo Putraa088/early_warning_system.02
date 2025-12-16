@@ -11,57 +11,75 @@ class GoogleSheetsModel:
         self.spreadsheet = None
         self.setup_connection()
     
-    def setup_connection(self):
-        """Setup connection to Google Sheets"""
-        try:
-            # Scope yang diperlukan
-            scope = [
-                'https://spreadsheets.google.com/feeds',
-                'https://www.googleapis.com/auth/drive'
-            ]
+def setup_connection(self):
+    """Setup connection to Google Sheets dengan debug detail"""
+    try:
+        print("🔧 Setting up Google Sheets connection...")
+        
+        # Scope
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        
+        # Check credentials source
+        if 'GOOGLE_SHEETS' in st.secrets:
+            print("✅ Using Streamlit Secrets")
+            secrets = st.secrets["GOOGLE_SHEETS"]
             
-            creds = None
+            # Debug: Print available keys
+            print(f"📋 Available keys in secrets: {list(secrets.keys())}")
             
-            # Coba dari Streamlit Secrets (production)
-            if 'GOOGLE_SHEETS' in st.secrets:
-                print("✅ Using Streamlit Secrets for Google Sheets")
-                credentials_dict = {
-                    "type": "service_account",
-                    "project_id": st.secrets["GOOGLE_SHEETS"]["project_id"],
-                    "private_key_id": st.secrets["GOOGLE_SHEETS"]["private_key_id"],
-                    "private_key": st.secrets["GOOGLE_SHEETS"]["private_key"].replace('\\n', '\n'),
-                    "client_email": st.secrets["GOOGLE_SHEETS"]["client_email"],
-                    "client_id": st.secrets["GOOGLE_SHEETS"]["client_id"],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                    "client_x509_cert_url": st.secrets["GOOGLE_SHEETS"]["client_x509_cert_url"]
-                }
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
-            elif os.path.exists('credentials.json'):
-                # Jika lokal (development)
-                print("✅ Using local credentials.json for Google Sheets")
-                creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
-            else:
-                print("⚠️ Google Sheets credentials tidak ditemukan")
+            # Check required keys
+            required_keys = ['project_id', 'private_key_id', 'private_key', 'client_email', 'SPREADSHEET_ID']
+            missing_keys = [key for key in required_keys if key not in secrets]
+            
+            if missing_keys:
+                print(f"❌ MISSING keys in secrets: {missing_keys}")
                 return
             
-            # Authorize client
-            self.client = gspread.authorize(creds)
+            credentials_dict = {
+                "type": "service_account",
+                "project_id": secrets["project_id"],
+                "private_key_id": secrets["private_key_id"],
+                "private_key": secrets["private_key"].replace('\\n', '\n'),
+                "client_email": secrets["client_email"],
+                "client_id": secrets.get("client_id", ""),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": secrets.get("client_x509_cert_url", "")
+            }
             
-            # Buka spreadsheet
-            spreadsheet_id = st.secrets.get("GOOGLE_SHEETS", {}).get("SPREADSHEET_ID", "")
-            if not spreadsheet_id:
-                print("⚠️ SPREADSHEET_ID tidak ditemukan")
-                return
+            print(f"📧 Service Account: {secrets['client_email']}")
+            print(f"📄 Project ID: {secrets['project_id']}")
+            print(f"🔑 Has SPREADSHEET_ID: {'SPREADSHEET_ID' in secrets}")
             
-            self.spreadsheet = self.client.open_by_key(spreadsheet_id)
-            print(f"✅ Google Sheets connected: {self.spreadsheet.title}")
-            
-        except Exception as e:
-            print(f"❌ Error connecting to Google Sheets: {e}")
-            self.client = None
-            self.spreadsheet = None
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+        
+        elif os.path.exists('credentials.json'):
+            print("✅ Using local credentials.json")
+            creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+        else:
+            print("❌ No credentials found")
+            return
+        
+        # Authorize
+        print("🔄 Authorizing with Google...")
+        self.client = gspread.authorize(creds)
+        print("✅ Authorization successful")
+        
+        # Get spreadsheet
+        spreadsheet_id = st.secrets["GOOGLE_SHEETS"]["SPREADSHEET_ID"]
+        print(f"📊 Opening spreadsheet ID: {spreadsheet_id}")
+        
+        self.spreadsheet = self.client.open_by_key(spreadsheet_id)
+        print(f"✅ Connected to: {self.spreadsheet.title}")
+        print(f"📋 Available worksheets: {[ws.title for ws in self.spreadsheet.worksheets()]}")
+        
+    except Exception as e:
+        print(f"❌ Google Sheets connection FAILED: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        self.client = None
+        self.spreadsheet = None
     
     def get_worksheet(self, sheet_name):
         """Get worksheet by name"""
