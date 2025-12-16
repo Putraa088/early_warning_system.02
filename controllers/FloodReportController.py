@@ -2,14 +2,13 @@ from models.FloodReportModel import FloodReportModel
 from models.GoogleSheetsModel import GoogleSheetsModel
 import os
 import uuid
-from datetime import datetime, timezone, timedelta
 import streamlit as st
 
 class FloodReportController:
     def __init__(self):
-        # Initialize database model
         self.flood_model = FloodReportModel()
         self.sheets_model = None
+        self.upload_folder = "uploads"
         
         # Initialize Google Sheets hanya untuk TAB 1
         try:
@@ -23,19 +22,11 @@ class FloodReportController:
             print(f"⚠️ Google Sheets init error: {e}")
             self.sheets_model = None
         
-        # Setup upload folder
-        self.upload_folder = "uploads"
         if not os.path.exists(self.upload_folder):
             os.makedirs(self.upload_folder)
-    
-    def get_wib_time(self):
-        """Get current time in WIB (UTC+7)"""
-        utc_now = datetime.now(timezone.utc)
-        wib_time = utc_now + timedelta(hours=7)
-        return wib_time
 
     def check_daily_limit(self, ip_address):
-        """Check if daily limit (10 reports per IP) has been reached"""
+        """Check if daily limit (10 reports per IP) has been reached - TANPA PERUBAHAN"""
         try:
             today_count = self.flood_model.get_today_reports_count_by_ip(ip_address)
             return today_count < 10
@@ -44,7 +35,7 @@ class FloodReportController:
             return True
 
     def submit_report(self, address, flood_height, reporter_name, reporter_phone=None, photo_file=None):
-        """Submit new flood report - ke SQLite dan Google Sheets (TAB 1 saja)"""
+        """Submit new flood report - HANYA ke TAB 1 dengan waktu WIB"""
         photo_path = None
         photo_url = None
         
@@ -52,11 +43,11 @@ class FloodReportController:
             # Get client IP
             client_ip = self.get_client_ip()
             
-            # Check daily limit
+            # Check daily limit - TANPA PERUBAHAN
             if not self.check_daily_limit(client_ip):
                 return False, "❌ Anda telah mencapai batas maksimal 10 laporan per hari."
             
-            # Handle photo upload
+            # Handle photo upload - TANPA PERUBAHAN
             if photo_file is not None:
                 try:
                     file_extension = photo_file.name.split('.')[-1].lower()
@@ -67,13 +58,11 @@ class FloodReportController:
                         f.write(photo_file.getbuffer())
                     
                     photo_url = f"uploads/{filename}"
-                    print(f"✅ Photo saved: {photo_url}")
                     
                 except Exception as e:
                     print(f"❌ Error saving photo: {e}")
             
-            # ========== SIMPAN KE SQLITE DATABASE ==========
-            print("📊 Saving to SQLite database...")
+            # Create report in SQLite database - AKAN OTOMATIS PAKAI WIB
             report_id = self.flood_model.create_report(
                 address=address,
                 flood_height=flood_height,
@@ -83,38 +72,31 @@ class FloodReportController:
                 ip_address=client_ip
             )
             
-            if not report_id:
+            if report_id:
+                # ========== SIMPAN KE GOOGLE SHEETS TAB 1 DENGAN WIB ==========
+                if self.sheets_model and self.sheets_model.client:
+                    try:
+                        sheets_data = {
+                            'address': address,
+                            'flood_height': flood_height,
+                            'reporter_name': reporter_name,
+                            'reporter_phone': reporter_phone or '',
+                            'ip_address': client_ip,
+                            'photo_url': photo_url or ''
+                        }
+                        
+                        success = self.sheets_model.save_flood_report(sheets_data)
+                        if success:
+                            print("✅ Report saved to Google Sheets dengan waktu WIB")
+                    except Exception as e:
+                        print(f"⚠️ Error saving to Google Sheets: {e}")
+                # ===================================================
+                
+                return True, "✅ Laporan berhasil dikirim!"
+            else:
                 if photo_path and os.path.exists(photo_path):
                     os.remove(photo_path)
-                return False, "❌ Gagal menyimpan laporan ke database lokal"
-            
-            print(f"✅ Saved to SQLite (ID: {report_id})")
-            
-            # ========== SIMPAN KE GOOGLE SHEETS TAB 1 ==========
-            if self.sheets_model and self.sheets_model.client:
-                try:
-                    print("☁️ Saving to Google Sheets...")
-                    sheets_data = {
-                        'address': address,
-                        'flood_height': flood_height,
-                        'reporter_name': reporter_name,
-                        'reporter_phone': reporter_phone or '',
-                        'ip_address': client_ip,
-                        'photo_url': photo_url or ''
-                    }
-                    
-                    success = self.sheets_model.save_flood_report(sheets_data)
-                    if success:
-                        print("✅ Report saved to Google Sheets")
-                    else:
-                        print("⚠️ Failed to save to Google Sheets")
-                        
-                except Exception as e:
-                    print(f"⚠️ Error saving to Google Sheets: {e}")
-            else:
-                print("ℹ️ Google Sheets not available, only saved to SQLite")
-            
-            return True, "✅ Laporan berhasil dikirim!"
+                return False, "❌ Gagal menyimpan laporan"
                 
         except Exception as e:
             print(f"❌ Error in submit_report: {e}")
@@ -122,7 +104,7 @@ class FloodReportController:
                 os.remove(photo_path)
             return False, f"❌ Error: {str(e)}"
     
-    # ============ FUNGSI UNTUK VIEWS ============
+    # ============ FUNGSI UNTUK VIEWS - TANPA PERUBAHAN ============
     
     def get_today_reports(self):
         """Get today's flood reports"""
@@ -145,13 +127,7 @@ class FloodReportController:
         try:
             if 'user_ip' not in st.session_state:
                 import random
-                # Generate IP address untuk testing
                 st.session_state.user_ip = f"192.168.1.{random.randint(1, 255)}"
             return st.session_state.user_ip
         except:
             return "user_local_test"
-    
-    def get_current_wib_time(self):
-        """Get current WIB time for display"""
-        wib_time = self.get_wib_time()
-        return wib_time.strftime("%Y-%m-%d %H:%M:%S WIB")
