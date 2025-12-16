@@ -436,7 +436,7 @@ def show_homepage():
     
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     
-    st.markdown("### Fitur Utama Sistem")
+    st.markdown("### Teantang Sistem")
     
     col1, col2 = st.columns(2)
     
@@ -444,8 +444,7 @@ def show_homepage():
         st.markdown(
             """
             <div class="feature-card">
-                <h3>KECERDASAN BUATAN</h3>
-                <p>Prediksi real-time menggunakan neural network dengan analisis data historis untuk akurasi maksimal.</p>
+                <p>Sistem ini membantu memantau kondisi cuaca dan ketinggian banjir untuk membarikan informasi awal mengenai potensi banjir.</p>
                 <ul style="color: #dfe9ec; padding-left: 20px;">
                     <li>Monitoring tinggi air otomatis</li>
                     <li>Prediksi risiko berbasis AI</li>
@@ -852,5 +851,6 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
+
 
 
