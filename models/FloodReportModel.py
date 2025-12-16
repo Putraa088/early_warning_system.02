@@ -7,78 +7,7 @@ class FloodReportModel:
     def __init__(self, db_path='flood_system.db'):
         self.db_path = db_path
         print(f"📂 Database path: {os.path.abspath(db_path)}")
-        self._force_init_database()
-    
-    def _force_init_database(self):
-        """Force initialize database - HAPUS DAN BUAT ULANG"""
-        try:
-            # Hapus database lama jika ada
-            if os.path.exists(self.db_path):
-                print(f"🗑️ Removing old database: {self.db_path}")
-                os.remove(self.db_path)
-            
-            # Buat koneksi baru
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # BUAT TABEL SANGAT SEDERHANA
-            cursor.execute('''
-                CREATE TABLE flood_reports (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT,
-                    address TEXT,
-                    flood_height TEXT,
-                    reporter_name TEXT,
-                    reporter_phone TEXT,
-                    photo_path TEXT,
-                    ip_address TEXT
-                )
-            ''')
-            
-            conn.commit()
-            conn.close()
-            
-            print("✅ Database created from scratch")
-            
-            # Test insert langsung
-            self._test_database()
-            
-        except Exception as e:
-            print(f"❌ CRITICAL: Cannot create database: {e}")
-            traceback.print_exc()
-    
-    def _test_database(self):
-        """Test database connection and insert"""
-        try:
-            print("🧪 Testing database...")
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Test insert
-            test_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute('''
-                INSERT INTO flood_reports 
-                (timestamp, address, flood_height, reporter_name, ip_address)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (test_time, "TEST ADDRESS", "TEST HEIGHT", "TEST USER", "127.0.0.1"))
-            
-            conn.commit()
-            
-            # Test select
-            cursor.execute('SELECT COUNT(*) FROM flood_reports')
-            count = cursor.fetchone()[0]
-            print(f"✅ Test insert successful! Total records: {count}")
-            
-            # Show all tables
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = cursor.fetchall()
-            print(f"✅ Tables in database: {tables}")
-            
-            conn.close()
-            
-        except Exception as e:
-            print(f"❌ Database test failed: {e}")
-            traceback.print_exc()
+        self.init_database()
     
     def get_connection(self):
         """Get database connection"""
@@ -90,76 +19,106 @@ class FloodReportModel:
             print(f"❌ Cannot connect to database: {e}")
             return None
     
-    def create_report(self, address, flood_height, reporter_name, 
-                      reporter_phone=None, photo_path=None, ip_address=None):
-        """Create new flood report - EXTREME SIMPLIFICATION"""
+    def init_database(self):
+        """Initialize database dengan struktur yang benar"""
         try:
-            if not self.get_connection():
-                print("❌ No database connection")
-                return None
-            
-            current_time = datetime.now()
-            timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
-            
-            print(f"📝 CREATE REPORT CALLED:")
-            print(f"   Address: '{address}'")
-            print(f"   Height: '{flood_height}'")
-            print(f"   Name: '{reporter_name}'")
-            print(f"   Phone: '{reporter_phone}'")
-            print(f"   Photo: '{photo_path}'")
-            print(f"   IP: '{ip_address}'")
-            print(f"   Time: '{timestamp}'")
+            # Hapus database lama jika ada masalah
+            if os.path.exists(self.db_path):
+                print(f"ℹ️ Database exists: {os.path.getsize(self.db_path)} bytes")
             
             conn = self.get_connection()
             if not conn:
+                # Buat database baru
+                conn = sqlite3.connect(self.db_path)
+            
+            cursor = conn.cursor()
+            
+            # Buat tabel jika belum ada
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS flood_reports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    flood_height TEXT NOT NULL,
+                    reporter_name TEXT NOT NULL,
+                    reporter_phone TEXT,
+                    photo_path TEXT,
+                    ip_address TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            conn.commit()
+            
+            # Cek struktur tabel
+            cursor.execute("PRAGMA table_info(flood_reports)")
+            columns = cursor.fetchall()
+            print(f"✅ Table 'flood_reports' ready with {len(columns)} columns")
+            
+            for col in columns:
+                print(f"  - {col[1]} ({col[2]})")
+            
+            conn.close()
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error in init_database: {e}")
+            traceback.print_exc()
+            return False
+    
+    def create_report(self, address, flood_height, reporter_name, 
+                      reporter_phone=None, photo_path=None, ip_address=None):
+        """Create new flood report"""
+        try:
+            current_time = datetime.now()
+            timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            print(f"📝 Creating report:")
+            print(f"  Address: {address}")
+            print(f"  Height: {flood_height}")
+            print(f"  Name: {reporter_name}")
+            print(f"  Phone: {reporter_phone}")
+            print(f"  Photo: {photo_path}")
+            print(f"  IP: {ip_address}")
+            print(f"  Time: {timestamp}")
+            
+            conn = self.get_connection()
+            if not conn:
+                print("❌ No database connection")
                 return None
             
             cursor = conn.cursor()
             
-            # INSERT dengan try-catch detail
-            try:
-                cursor.execute('''
-                    INSERT INTO flood_reports 
-                    (timestamp, address, flood_height, reporter_name, reporter_phone, photo_path, ip_address)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    str(timestamp),
-                    str(address) if address else "",
-                    str(flood_height) if flood_height else "",
-                    str(reporter_name) if reporter_name else "",
-                    str(reporter_phone) if reporter_phone else None,
-                    str(photo_path) if photo_path else None,
-                    str(ip_address) if ip_address else "unknown"
-                ))
-                
-                conn.commit()
-                last_id = cursor.lastrowid
-                print(f"✅ INSERT successful! ID: {last_id}")
-                
-                # VERIFY with direct query
-                cursor.execute('SELECT * FROM flood_reports WHERE id = ?', (last_id,))
-                row = cursor.fetchone()
-                
-                if row:
-                    print(f"✅ VERIFICATION PASSED:")
-                    print(f"   ID: {row['id']}")
-                    print(f"   Address: {row['address']}")
-                    print(f"   Timestamp: {row['timestamp']}")
-                else:
-                    print("❌ VERIFICATION FAILED: Row not found!")
-                
-                conn.close()
-                return last_id
-                
-            except sqlite3.Error as e:
-                print(f"❌ SQLite error during INSERT: {e}")
-                print(f"❌ SQLite error details: {e.__class__.__name__}")
-                conn.rollback()
-                conn.close()
-                return None
-                
+            # INSERT data
+            cursor.execute('''
+                INSERT INTO flood_reports 
+                (timestamp, address, flood_height, reporter_name, reporter_phone, 
+                 photo_path, ip_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                timestamp,
+                str(address) if address else "",
+                str(flood_height) if flood_height else "",
+                str(reporter_name) if reporter_name else "",
+                str(reporter_phone) if reporter_phone else None,
+                str(photo_path) if photo_path else None,
+                str(ip_address) if ip_address else "unknown"
+            ))
+            
+            conn.commit()
+            last_id = cursor.lastrowid
+            print(f"✅ Report created with ID: {last_id}")
+            
+            # Verifikasi
+            cursor.execute('SELECT COUNT(*) FROM flood_reports')
+            count = cursor.fetchone()[0]
+            print(f"✅ Total reports in database: {count}")
+            
+            conn.close()
+            return last_id
+            
         except Exception as e:
-            print(f"❌ UNEXPECTED error in create_report: {e}")
+            print(f"❌ Error creating report: {e}")
             traceback.print_exc()
             return None
     
@@ -181,7 +140,7 @@ class FloodReportModel:
             count = cursor.fetchone()[0]
             conn.close()
             
-            print(f"📊 Count for IP {ip_address} today: {count}")
+            print(f"📊 Today's reports for IP {ip_address}: {count}")
             return count
             
         except Exception as e:
@@ -209,6 +168,15 @@ class FloodReportModel:
             
             reports = []
             for row in rows:
+                # Parse timestamp untuk report_date dan report_time
+                try:
+                    timestamp = datetime.strptime(row['timestamp'], '%Y-%m-%d %H:%M:%S')
+                    report_date = timestamp.strftime('%Y-%m-%d')
+                    report_time = timestamp.strftime('%H:%M:%S')
+                except:
+                    report_date = row['timestamp'][:10] if row['timestamp'] else "N/A"
+                    report_time = row['timestamp'][11:19] if row['timestamp'] and len(row['timestamp']) > 11 else "N/A"
+                
                 reports.append({
                     'id': row['id'],
                     'address': row['address'],
@@ -217,6 +185,8 @@ class FloodReportModel:
                     'reporter_phone': row['reporter_phone'],
                     'photo_path': row['photo_path'],
                     'ip_address': row['ip_address'],
+                    'report_date': report_date,
+                    'report_time': report_time,
                     'timestamp': row['timestamp']
                 })
             
@@ -248,14 +218,14 @@ class FloodReportModel:
             
             reports = []
             for row in rows:
-                # Parse timestamp untuk date/time
+                # Parse timestamp untuk report_date dan report_time
                 try:
-                    dt = datetime.strptime(row['timestamp'], '%Y-%m-%d %H:%M:%S')
-                    report_date = dt.strftime('%Y-%m-%d')
-                    report_time = dt.strftime('%H:%M:%S')
+                    timestamp = datetime.strptime(row['timestamp'], '%Y-%m-%d %H:%M:%S')
+                    report_date = timestamp.strftime('%Y-%m-%d')
+                    report_time = timestamp.strftime('%H:%M:%S')
                 except:
-                    report_date = "N/A"
-                    report_time = "N/A"
+                    report_date = row['timestamp'][:10] if row['timestamp'] else "N/A"
+                    report_time = row['timestamp'][11:19] if row['timestamp'] and len(row['timestamp']) > 11 else "N/A"
                 
                 reports.append({
                     'id': row['id'],
