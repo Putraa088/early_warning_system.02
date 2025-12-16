@@ -24,7 +24,8 @@ for folder in ['controllers', 'models', 'views']:
         sys.path.insert(0, folder_path)
 
 # ==================== DATABASE INITIALIZATION ====================
-DB_PATH = 'flood_system.db'
+import os
+DB_PATH = os.path.join(os.getcwd(), 'flood_system.db')
 print(f"🔍 Checking database at: {os.path.abspath(DB_PATH)}")
 
 if not os.path.exists(DB_PATH):
@@ -889,3 +890,4 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
+
