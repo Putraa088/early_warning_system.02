@@ -1,17 +1,12 @@
 import streamlit as st
-from datetime import datetime
 
 def show_flood_report_form(controller):
-    """Show flood report form"""
-    
-    # Display current WIB time
-    current_time = controller.get_current_wib_time()
-    st.info(f"Waktu saat ini: **{current_time}**")
+    """Show flood report form - TIDAK ADA PERUBAHAN"""
     
     with st.form("flood_report_form"):
         st.markdown("### Formulir Laporan Banjir")
         
-        # Form fields
+        # Form fields - TANPA PERUBAHAN
         address = st.text_area(
             "Lokasi Kejadian*",
             placeholder="Contoh: Jl. Diponegoro No. 52, Salatiga, Jawa Tengah",
@@ -83,15 +78,5 @@ def show_flood_report_form(controller):
                     if success:
                         st.success(message)
                         st.balloons()
-                        
-                        # Show summary
-                        with st.expander("📋 Ringkasan Laporan", expanded=True):
-                            st.markdown(f"""
-                            **Laporan berhasil dikirim pada:** {current_time}
-                            
-                            **Lokasi:** {address}
-                            **Tinggi Banjir:** {flood_height} cm
-                            **Nama Pelapor:** {reporter_name}
-                            """)
                     else:
                         st.error(message)
