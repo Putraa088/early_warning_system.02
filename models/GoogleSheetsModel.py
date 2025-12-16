@@ -7,8 +7,16 @@ import os
 
 class GoogleSheetsModel:
     def __init__(self):
-        """Initialize Google Sheets connection"""
-        self.setup_connection()
+        self.client = None
+        self.spreadsheet = None
+        
+        try:
+            import gspread
+            from oauth2client.service_account import ServiceAccountCredentials
+            self.setup_connection()
+        except ImportError as e:
+            print(f"⚠️ Google Sheets dependencies tidak terinstall: {e}")
+            print("⚠️ Mode fallback: Data hanya disimpan di SQLite lokal")
     
     def setup_connection(self):
         """Setup connection to Google Sheets"""
