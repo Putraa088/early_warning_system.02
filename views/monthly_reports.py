@@ -4,36 +4,10 @@ import os
 from datetime import datetime
 
 def show_monthly_reports_summary(controller):
-    """Display monthly reports summary - TERBARU DI ATAS dengan JAM"""
+    """Display monthly reports summary - FIXED untuk controller baru"""
     
     st.markdown("""
     <style>
-    .stat-card {
-        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 10px 0;
-        border: 1px solid #333333;
-    }
-    .stat-number {
-        font-size: 2em;
-        font-weight: bold;
-        margin-bottom: 5px;
-        color: #00a8ff;
-    }
-    .stat-label {
-        font-size: 0.9em;
-        color: #aaaaaa;
-    }
-    
-    .report-row {
-        padding: 12px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .report-row:last-child {
-        border-bottom: none;
-    }
     .time-badge {
         background: rgba(0, 168, 255, 0.15);
         color: #00a8ff;
@@ -44,28 +18,17 @@ def show_monthly_reports_summary(controller):
         display: inline-block;
         margin-left: 8px;
     }
-    .new-badge {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: inline-block;
-        margin-left: 5px;
-    }
     </style>
     """, unsafe_allow_html=True)
     
-    # Get statistics and reports (sudah terurut dari terbaru)
-    stats = controller.get_monthly_statistics()
-    reports = controller.get_month_reports()
+    # Get reports
+    reports = controller.get_month_reports()  # FIXED: Gunakan method yang benar
     
     if not reports:
-        st.info(" Tidak ada laporan banjir untuk bulan ini.")
+        st.info("📭 Tidak ada laporan banjir untuk bulan ini.")
         return
     
-    # Daftar laporan dengan informasi urutan dan JAM
+    # Daftar laporan
     current_month = datetime.now().strftime('%B %Y')
     total_reports = len(reports)
     
@@ -73,11 +36,25 @@ def show_monthly_reports_summary(controller):
     today = datetime.now().strftime('%Y-%m-%d')
     today_reports = [r for r in reports if r['report_date'] == today]
     
-    st.markdown(f"### Daftar Laporan Bulan {current_month}")
+    # Statistics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Laporan", total_reports)
+    with col2:
+        st.metric("Laporan Hari Ini", len(today_reports))
+    with col3:
+        unique_reporters = len(set(r['reporter_name'] for r in reports))
+        st.metric("Jumlah Pelapor", unique_reporters)
+    with col4:
+        locations = len(set(r['address'] for r in reports))
+        st.metric("Lokasi Berbeda", locations)
     
-    # Tampilkan laporan dengan format yang lebih baik
+    st.markdown("---")
+    
+    st.markdown(f"### 📅 Daftar Laporan Bulan {current_month}")
+    
+    # Tampilkan laporan
     for i, report in enumerate(reports, 1):
-        # Container untuk setiap baris laporan
         with st.container():
             col1, col2, col3, col4, col5 = st.columns([4, 2, 2, 2, 1])
             
@@ -85,11 +62,14 @@ def show_monthly_reports_summary(controller):
                 # Alamat dengan badge jika laporan hari ini
                 address_text = f"**{i}. {report['address']}**"
                 if report['report_date'] == today:
+                    st.markdown(f"{address_text} 🆕", unsafe_allow_html=True)
+                else:
                     st.markdown(address_text, unsafe_allow_html=True)
                 
-                # Tampilkan waktu dengan badge - PERBAIKAN DI SINI
+                # Waktu
                 time_display = format_time(report['report_time'])
-                st.markdown(f'<span class="time-badge"> {time_display}</span>', unsafe_allow_html=True)
+                if time_display:
+                    st.markdown(f'<span class="time-badge">🕐 {time_display}</span>', unsafe_allow_html=True)
             
             with col2:
                 st.write(f"**{report['flood_height']}**")
@@ -102,30 +82,22 @@ def show_monthly_reports_summary(controller):
                 st.write(report['reporter_name'])
             
             with col5:
-                if report['photo_path']:
-                    if st.button("Lihat", key=f"view_{i}", use_container_width=True):
+                if report['photo_path'] and os.path.exists(report['photo_path']):
+                    if st.button("📷", key=f"view_monthly_{report['id']}", help="Lihat foto"):
                         with st.expander(f"Foto - {report['address']}"):
-                            if os.path.exists(report['photo_path']):
+                            try:
                                 st.image(report['photo_path'], use_column_width=True)
-                            else:
-                                st.warning("Foto tidak ditemukan")
+                            except:
+                                st.warning("Foto tidak dapat ditampilkan")
                 else:
-                    st.write("Tidak ada")
+                    st.write("📭")
         
-        # Divider antar laporan (kecuali untuk laporan terakhir)
+        # Divider antar laporan
         if i < total_reports:
             st.divider()
 
-def format_date(date_string):
-    """Format date untuk display pendek (dd/mm/yy)"""
-    try:
-        date_obj = datetime.strptime(date_string, '%Y-%m-%d')
-        return date_obj.strftime('%d/%m/%y')
-    except:
-        return date_string
-
 def format_date_full(date_string):
-    """Format date untuk display lengkap (Hari, dd/mm/yyyy)"""
+    """Format date untuk display lengkap"""
     try:
         date_obj = datetime.strptime(date_string, '%Y-%m-%d')
         days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
@@ -135,10 +107,10 @@ def format_date_full(date_string):
         return date_string
 
 def format_time(time_string):
-    """Format time untuk display (HH:MM)"""
+    """Format time untuk display"""
     try:
-        if len(time_string) == 8:  
+        if time_string and len(time_string) >= 5:
             return time_string[:5]
-        return time_string
+        return ""
     except:
-        return time_string
+        return ""
