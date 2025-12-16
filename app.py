@@ -25,23 +25,38 @@ for folder in ['controllers', 'models', 'views']:
 
 # ==================== DATABASE INITIALIZATION ====================
 DB_PATH = 'flood_system.db'
+print(f"🔍 Checking database at: {os.path.abspath(DB_PATH)}")
 
-# Cek apakah database sudah ada
 if not os.path.exists(DB_PATH):
-    st.warning("Database belum diinisialisasi. Membuat database baru...")
+    st.warning("⚠️ Database belum diinisialisasi. Menjalankan init database...")
     try:
-        # Import dan buat instance model untuk membuat database
-        from models.FloodReportModel import FloodReportModel
-        model = FloodReportModel()
+        # Coba inisialisasi database sederhana
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Buat tabel sederhana
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS flood_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                address TEXT NOT NULL,
+                flood_height TEXT NOT NULL,
+                reporter_name TEXT NOT NULL,
+                reporter_phone TEXT,
+                photo_path TEXT,
+                ip_address TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
         st.success("✅ Database berhasil diinisialisasi!")
     except Exception as e:
         st.error(f"❌ Gagal inisialisasi database: {e}")
-        # Tampilkan error detail untuk debugging
-        st.error(f"Error detail: {str(e)}")
-        # Tetap lanjut tanpa database
-        st.info("⚠️ Aplikasi akan berjalan tanpa database lokal")
 else:
-    print(f"✅ Database sudah ada: {DB_PATH}")
+    print(f"✅ Database found: {os.path.getsize(DB_PATH)} bytes")
 
 # ==================== IMPORT CONTROLLERS ====================
 try:
@@ -329,7 +344,7 @@ if 'controllers_initialized' not in st.session_state:
     try:
         print("🔄 Initializing controllers...")
         st.session_state.visitor_controller = VisitorController()
-        st.session_state.flood_controller = FloodReportController()  # FIXED: Gunakan FloodReportController
+        st.session_state.flood_controller = FloodReportController()
         st.session_state.realtime_controller = RealTimeDataController()
         st.session_state.controllers_initialized = True
         print("✅ All controllers initialized successfully")
@@ -341,11 +356,11 @@ if 'controllers_initialized' not in st.session_state:
 
 if st.session_state.controllers_initialized:
     visitor_controller = st.session_state.visitor_controller
-    flood_controller = st.session_state.flood_controller  # FIXED: Gunakan flood_controller
+    flood_controller = st.session_state.flood_controller
     realtime_controller = st.session_state.realtime_controller
 else:
     visitor_controller = VisitorController()
-    flood_controller = FloodReportController()  # FIXED: Gunakan FloodReportController
+    flood_controller = FloodReportController()
     realtime_controller = RealTimeDataController()
 
 # ==================== SIDEBAR NAVIGATION ====================
@@ -874,6 +889,3 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
-
-
-
