@@ -366,7 +366,7 @@ def setup_sidebar():
         
         for text, page in menu_items:
             if st.button(text, key=f"menu_{page}", use_container_width=True,
-                         type="primary" if st.session_state.current_page == page else "secondary"):
+                        type="primary" if st.session_state.current_page == page else "secondary"):
                 st.session_state.current_page = page
                 st.rerun()
         
@@ -635,13 +635,6 @@ def show_flood_calculator_page():
             time.sleep(0.8)
             
             try:
-                # Konversi ke float untuk memastikan tipe data benar
-                rainfall_float = float(rainfall)
-                water_level_float = float(water_level)
-                humidity_float = float(humidity)
-                temp_min_float = float(temp_min)
-                temp_max_float = float(temp_max)
-                
                 result = predict_flood_ann_with_temp_range(
                     rainfall=rainfall_float,
                     water_level=water_level_float,
@@ -650,17 +643,34 @@ def show_flood_calculator_page():
                     temp_max=temp_max_float
                 )
                 
-                show_calculator_result(
-                    result, 
-                    rainfall_float, 
-                    water_level_float, 
-                    humidity_float, 
-                    temp_min_float, 
-                    temp_max_float
-                )
+                # ========== SIMPAN PREDIKSI KE GOOGLE SHEETS ==========
+                try:
+                    if hasattr(flood_controller, 'save_prediction_to_sheets'):
+                        prediction_data = {
+                            'location': 'Kalkulator',
+                            'rainfall': rainfall_float,
+                            'water_level': water_level_float,
+                            'humidity': humidity_float,
+                            'temp_min': temp_min_float,
+                            'temp_max': temp_max_float,
+                            'risk_level': result['risk_level'],
+                            'status': result['status'],
+                            'message': result.get('message', 'Prediksi risiko banjir')
+                        }
+                        
+                        success = flood_controller.save_prediction_to_sheets(prediction_data)
+                        if success:
+                            print("✅ Prediction saved to Google Sheets")
+                except Exception as e:
+                    print(f"⚠️ Error saving prediction to Google Sheets: {e}")
+                # ========== END GOOGLE SHEETS ==========
+                
+                show_calculator_result(result, rainfall_float, water_level_float, 
+                                    humidity_float, temp_min_float, temp_max_float)
                 
             except Exception as e:
                 st.error(f"Error dalam prediksi: {str(e)}")
+
                 
                 # Fallback prediction jika ada error
                 temp_avg = (float(temp_min) + float(temp_max)) / 2
