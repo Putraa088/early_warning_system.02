@@ -43,25 +43,40 @@ try:
     print("✅ Semua controllers berhasil di-import")
 except Exception as e:
     st.error(f"Import Error Controller: {e}")
-    
-    # Fallback tanpa Google Sheets
+
     class VisitorController:
-        def track_visit(self, page): return None
-        def get_visitor_stats(self): return {}
-    
+        def track_visit(self, page):
+            return None
+        def get_visitor_stats(self):
+            return {}
+
     class FloodReportController:
         def submit_report(self, *args, **kwargs):
-            return False, "Sistem offline - Google Sheets tidak terhubung"
-        def get_today_reports(self): return []
-        def get_month_reports(self): return []
-        def get_all_reports(self): return []
-        def get_monthly_statistics(self): return {}
-        def get_client_ip(self): return "127.0.0.1"
-    
+            return False, "Fallback"
+        def get_today_reports(self):
+            return []
+        def get_month_reports(self):
+            return []
+        def get_all_reports(self):
+            return []
+        def get_monthly_statistics(self):
+            return {}
+        def get_client_ip(self):
+            return "127.0.0.1"
+        def save_prediction_to_sheets(self, *args, **kwargs):
+            return False
+        def update_monthly_statistics(self):
+            return False
+        def get_google_sheets_stats(self):
+            return {}
+
     class RealTimeDataController:
-        def get_comprehensive_data(self): return []
-        def get_overall_risk_status(self, p): return "RENDAH", "green"
-        def is_same_location(self, l1, l2): return True
+        def get_comprehensive_data(self):
+            return []
+        def get_overall_risk_status(self, p):
+            return "RENDAH", "green"
+        def is_same_location(self, l1, l2):
+            return True
 
 # ==================== IMPORT MODEL PREDICTION ====================
 try:
@@ -95,7 +110,7 @@ try:
     from views.flood_reports_table import show_current_month_reports
     from views.monthly_reports import show_monthly_reports_summary
     from views.prediction_dashboard import show_prediction_dashboard
-    # Menghapus import untuk AI dan Statistical analysis
+    from views.admin_dashboard import show_admin_dashboard
 except Exception as e:
     st.error(f"Import Error Views: {e}")
 
@@ -110,6 +125,9 @@ except Exception as e:
 
     def show_prediction_dashboard(*args, **kwargs):
         st.info("Prediction dashboard not available")
+    
+    def show_admin_dashboard(*args, **kwargs):
+        st.info("Admin dashboard not available")
 
 # ==================== CSS THEME ====================
 CSS_THEME = r"""
@@ -352,21 +370,21 @@ def setup_sidebar():
         if 'current_page' not in st.session_state:
             st.session_state.current_page = "Home"
 
-        # Hanya 6 menu yang tersisa
         menu_items = [
             ("Home", "Home"),
             ("Lapor Banjir", "Lapor Banjir"),
             ("Laporan Harian", "Laporan Harian"),
             ("Rekapan Bulanan", "Rekapan Bulanan"),
             ("Prediksi Real-time", "Prediksi Banjir"),
-            ("Kalkulator Banjir", "Kalkulator Banjir")
+            ("Kalkulator Banjir", "Kalkulator Banjir"),
+            ("Admin Dashboard", "Admin Dashboard")
         ]
 
         st.markdown('<div style="margin: 10px 0;">', unsafe_allow_html=True)
         
         for text, page in menu_items:
             if st.button(text, key=f"menu_{page}", use_container_width=True,
-                        type="primary" if st.session_state.current_page == page else "secondary"):
+                         type="primary" if st.session_state.current_page == page else "secondary"):
                 st.session_state.current_page = page
                 st.rerun()
         
@@ -516,8 +534,8 @@ def show_flood_calculator_page():
                     min_value=0.0,
                     max_value=500.0,
                     value=100.0,
-                    step=0.01,  # Bisa input desimal
-                    format="%.2f",  # Format 2 angka di belakang koma
+                    step=0.01,
+                    format="%.2f",
                     help="Masukkan curah hujan dalam mm (0.00-500.00 mm)",
                     key="rainfall_input"
                 )
@@ -530,8 +548,8 @@ def show_flood_calculator_page():
                     min_value=60.0,
                     max_value=150.0,
                     value=100.0,
-                    step=0.01,  # Bisa input desimal
-                    format="%.2f",  # Format 2 angka di belakang koma
+                    step=0.01,
+                    format="%.2f",
                     help="Masukkan tinggi air dalam mdpl (60.00-150.00 mdpl)",
                     key="water_input"
                 )
@@ -548,8 +566,8 @@ def show_flood_calculator_page():
                     min_value=0.0,
                     max_value=100.0,
                     value=70.0,
-                    step=0.01,  # Bisa input desimal
-                    format="%.2f",  # Format 2 angka di belakang koma
+                    step=0.01,
+                    format="%.2f",
                     help="Masukkan kelembapan dalam persen (0.00-100.00%)",
                     key="humidity_input"
                 )
@@ -563,11 +581,11 @@ def show_flood_calculator_page():
                 with temp_col1:
                     temp_min = st.number_input(
                         "Suhu Min (°C)",
-                        min_value=-50.0,  # Bisa negatif sampai -50°C
+                        min_value=-50.0,
                         max_value=50.0,
                         value=24.0,
-                        step=0.1,  # Bisa input desimal
-                        format="%.1f",  # Format 1 angka di belakang koma
+                        step=0.1,
+                        format="%.1f",
                         help="Suhu minimum harian (-50.0 sampai 50.0°C)",
                         key="temp_min_input"
                     )
@@ -575,52 +593,21 @@ def show_flood_calculator_page():
                 with temp_col2:
                     temp_max = st.number_input(
                         "Suhu Max (°C)",
-                        min_value=-50.0,  # Bisa negatif sampai -50°C
+                        min_value=-50.0,
                         max_value=50.0,
                         value=32.0,
-                        step=0.1,  # Bisa input desimal
-                        format="%.1f",  # Format 1 angka di belakang koma
+                        step=0.1,
+                        format="%.1f",
                         help="Suhu maksimum harian (-50.0 sampai 50.0°C)",
                         key="temp_max_input"
                     )
                 
                 if temp_max < temp_min:
                     st.error("⚠️ Suhu maksimum harus lebih besar atau sama dengan suhu minimum")
-                    # Otomatis sesuaikan jika user memasukkan nilai yang salah
                     temp_max = temp_min
                 
                 temp_avg = (temp_min + temp_max) / 2
                 st.caption(f"Rentang: {temp_min:.1f}°C – {temp_max:.1f}°C | Rata-rata: {temp_avg:.1f}°C")
-            
-            st.markdown("---")
-            
-            # Informasi tentang input desimal dan suhu negatif
-            with st.expander("ℹ️ Panduan Input", expanded=False):
-                st.markdown("""
-                **Panduan Pengisian:**
-                
-                **1. Curah Hujan (mm):**
-                - Nilai: 0.00 - 500.00 mm
-                - Contoh: 125.50 mm, 75.25 mm
-                - Format: bisa 2 angka di belakang koma
-                
-                **2. Tinggi Air (mdpl):**
-                - Nilai: 60.00 - 150.00 mdpl
-                - Contoh: 123.75 mdpl, 98.50 mdpl
-                - Format: bisa 2 angka di belakang koma
-                
-                **3. Kelembapan (%):**
-                - Nilai: 0.00 - 100.00%
-                - Contoh: 85.50%, 72.25%
-                - Format: bisa 2 angka di belakang koma
-                
-                **4. Suhu (°C):**
-                - Min: -50.0°C sampai 50.0°C
-                - Max: -50.0°C sampai 50.0°C
-                - Contoh: -5.0°C, 0.0°C, 25.5°C
-                - Format: bisa 1 angka di belakang koma
-                - Catatan: Suhu maksimal harus ≥ suhu minimal
-                """)
             
             submit_col1, submit_col2, submit_col3 = st.columns([1, 2, 1])
             with submit_col2:
@@ -630,11 +617,19 @@ def show_flood_calculator_page():
                     type="primary"
                 )
     
+    # ========== PREDIKSI SETELAH FORM SUBMIT ==========
     if submitted:
         with st.spinner("Menganalisis data..."):
             time.sleep(0.8)
             
             try:
+                # Konversi ke float di DALAM block ini
+                rainfall_float = float(rainfall)
+                water_level_float = float(water_level)
+                humidity_float = float(humidity)
+                temp_min_float = float(temp_min)
+                temp_max_float = float(temp_max)
+                
                 result = predict_flood_ann_with_temp_range(
                     rainfall=rainfall_float,
                     water_level=water_level_float,
@@ -660,19 +655,20 @@ def show_flood_calculator_page():
                         
                         success = flood_controller.save_prediction_to_sheets(prediction_data)
                         if success:
-                            print("✅ Prediction saved to Google Sheets")
+                            st.success("✅ Prediksi tersimpan di Google Sheets!")
+                        else:
+                            st.info("ℹ️ Prediksi disimpan lokal (Google Sheets offline)")
                 except Exception as e:
                     print(f"⚠️ Error saving prediction to Google Sheets: {e}")
                 # ========== END GOOGLE SHEETS ==========
                 
                 show_calculator_result(result, rainfall_float, water_level_float, 
-                                    humidity_float, temp_min_float, temp_max_float)
+                                      humidity_float, temp_min_float, temp_max_float)
                 
             except Exception as e:
                 st.error(f"Error dalam prediksi: {str(e)}")
-
                 
-                # Fallback prediction jika ada error
+                # Fallback prediction tanpa Google Sheets
                 temp_avg = (float(temp_min) + float(temp_max)) / 2
                 simple_risk = min(1.0, (float(rainfall) / 300) * 0.6 + (float(water_level) / 150) * 0.25 + (float(humidity) / 100) * 0.15)
                 
@@ -693,19 +689,14 @@ def show_flood_calculator_page():
                     'temperature_range': {'min': float(temp_min), 'max': float(temp_max), 'average': temp_avg}
                 }
                 
-                show_calculator_result(
-                    simple_result, 
-                    float(rainfall), 
-                    float(water_level), 
-                    float(humidity), 
-                    float(temp_min), 
-                    float(temp_max)
-                )
+                show_calculator_result(simple_result, float(rainfall), float(water_level), 
+                                      float(humidity), float(temp_min), float(temp_max))
 
 def show_calculator_result(result, rainfall, water_level, humidity, temp_min, temp_max):
-    """Tampilkan hasil kalkulator - PAKAI STREAMLIT MURNI"""
+    """Tampilkan hasil kalkulator"""
     
     st.markdown("---")
+    
     st.markdown("### HASIL PREDIKSI")
     st.caption("Berdasarkan parameter yang dimasukkan")
     
@@ -719,8 +710,6 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
     risk_color = status_colors.get(result['status'], '#6b7280')
     risk_level = result.get('risk_level', 0.0)
     risk_level = max(0.0, min(1.0, risk_level))
-    
-    # ============== GANTI DENGAN STREAMLIT MURNI ==============
     
     # Header status dengan warna
     st.markdown(f"""
@@ -763,14 +752,51 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
     with col3:
         st.markdown("<p style='text-align: center; color: #9ca3af; font-size: 0.9rem;'>TINGGI<br>(0.8-1.0)</p>", unsafe_allow_html=True)
     
-    # ============== DETAIL PARAMETER ==============
-    with st.expander(" Detail Parameter Input", expanded=False):
-        st.markdown("###  Parameter yang Dimasukkan")
+    # Rekomendasi Tindakan
+    st.markdown("### 📋 Rekomendasi Tindakan")
+    
+    recommendations = {
+        'RENDAH': [
+            "✅ **Kondisi Aman**: Tetap waspada terhadap perubahan cuaca",
+            "📱 Simpan nomor darurat: 085156959561",
+            "📡 Pantau update cuaca dan peringatan dari pihak berwenang",
+            "💧 Pastikan saluran air di sekitar rumah dalam kondisi lancar",
+            "📸 Laporkan jika melihat genangan air yang mengkhawatirkan",
+            "📝 Siapkan dokumen penting di tempat yang aman"
+        ],
+        'MENENGAH': [
+            "⚠️ **Status Siaga**: Tingkatkan kewaspadaan",
+            "🎒 Siapkan tas darurat berisi dokumen penting, obat-obatan, dan kebutuhan dasar",
+            "🚗 Pastikan kendaraan dalam kondisi siap dan bensin terisi",
+            "📍 Hindari area rendah dan tepi sungai",
+            "📞 Hubungi pihak berwenang jika melihat tanda-tanda banjir",
+            "🔌 Matikan peralatan listrik di bagian bawah rumah",
+            "🏠 Cek kondisi rumah dan sekitarnya"
+        ],
+        'TINGGI': [
+            "🚨 **Status Bahaya**: Segera lakukan tindakan!",
+            "⬆️ SEGERA EVAKUASI ke tempat yang lebih tinggi",
+            "🔌 Matikan listrik dan gas di rumah sebelum meninggalkan",
+            "📞 Hubungi nomor darurat: 085156959561",
+            "🚫 JANGAN berjalan di arus banjir atau menyebrangi aliran air",
+            "👥 Evakuasi ke tempat yang lebih tinggi dan aman",
+            "📢 Ikuti instruksi dari petugas berwenang",
+            "⛔ Jangan kembali ke rumah sebelum dinyatakan aman",
+            "🏃‍♂️ Bawa tas darurat dan dokumen penting"
+        ]
+    }
+    
+    for rec in recommendations.get(result['status'], []):
+        st.markdown(f"- {rec}")
+    
+    # Detail Parameter Input
+    with st.expander("📊 Detail Parameter Input", expanded=False):
+        st.markdown("### 📈 Parameter yang Dimasukkan")
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric(" Curah Hujan", f"{rainfall} mm")
+            st.metric("🌧️ Curah Hujan", f"{rainfall:.2f} mm")
             if rainfall > 200:
                 st.error(">200 mm: HUJAN SANGAT LEBAT")
             elif rainfall > 100:
@@ -779,7 +805,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<100 mm: HUJAN NORMAL")
         
         with col2:
-            st.metric(" Tinggi Air", f"{water_level} mdpl")
+            st.metric("💧 Tinggi Air", f"{water_level:.2f} mdpl")
             if water_level > 130:
                 st.error(">130 mdpl: TINGGI")
             elif water_level > 110:
@@ -788,7 +814,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<110 mdpl: NORMAL")
         
         with col3:
-            st.metric(" Kelembapan", f"{humidity}%")
+            st.metric("💨 Kelembapan", f"{humidity:.2f}%")
             if humidity > 80:
                 st.warning(">80%: SANGAT LEMBAP")
             elif humidity > 60:
@@ -798,8 +824,8 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
         
         with col4:
             temp_avg = (temp_min + temp_max) / 2
-            st.metric(" Suhu Rata-rata", f"{temp_avg:.1f}°C")
-            st.caption(f"Min: {temp_min}°C | Max: {temp_max}°C")
+            st.metric("🌡️ Suhu Rata-rata", f"{temp_avg:.1f}°C")
+            st.caption(f"Min: {temp_min:.1f}°C | Max: {temp_max:.1f}°C")
             if temp_avg > 30:
                 st.error(">30°C: PANAS")
             elif temp_avg > 25:
@@ -868,18 +894,32 @@ def show_prediction_page():
     )
     show_prediction_dashboard(realtime_controller)
 
+def show_admin_dashboard_page():
+    st.markdown(
+        """
+        <div class="hero-section" style="padding: 30px; margin-bottom: 30px;">
+            <h2 style="color: var(--accent) !important; margin-bottom: 15px; font-weight: 700;">Admin Dashboard</h2>
+            <p style="color: #dfe9ec !important; font-size: 1.1rem; font-weight: 400;">
+                Monitor data dan statistik sistem peringatan dini banjir.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    show_admin_dashboard(flood_controller)
+
 # ==================== MAIN APP ====================
 def main():
     setup_sidebar()
 
-    # Hanya 6 page handlers yang tersisa
     page_handlers = {
         "Home": show_homepage,
         "Lapor Banjir": show_flood_report_page,
         "Laporan Harian": show_current_month_reports_page,
         "Rekapan Bulanan": show_monthly_reports_page,
         "Prediksi Banjir": show_prediction_page,
-        "Kalkulator Banjir": show_flood_calculator_page
+        "Kalkulator Banjir": show_flood_calculator_page,
+        "Admin Dashboard": show_admin_dashboard_page
     }
 
     handler = page_handlers.get(st.session_state.current_page, show_homepage)
