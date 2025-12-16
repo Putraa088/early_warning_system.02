@@ -7,14 +7,15 @@ import streamlit as st
 
 class FloodReportController:
     def __init__(self):
+        # Initialize database model
         self.flood_model = FloodReportModel()
         self.sheets_model = None
         
-        # Initialize Google Sheets untuk semua tab
+        # Initialize Google Sheets hanya untuk TAB 1
         try:
             self.sheets_model = GoogleSheetsModel()
             if self.sheets_model.client:
-                print("✅ Google Sheets connected for all tabs")
+                print("✅ Google Sheets connected for flood reports")
             else:
                 print("⚠️ Google Sheets offline - using SQLite only")
                 self.sheets_model = None
@@ -43,7 +44,7 @@ class FloodReportController:
             return True
 
     def submit_report(self, address, flood_height, reporter_name, reporter_phone=None, photo_file=None):
-        """Submit new flood report ke SEMUA tempat: SQLite + Google Sheets semua tab"""
+        """Submit new flood report - ke SQLite dan Google Sheets (TAB 1 saja)"""
         photo_path = None
         photo_url = None
         
@@ -66,21 +67,13 @@ class FloodReportController:
                         f.write(photo_file.getbuffer())
                     
                     photo_url = f"uploads/{filename}"
+                    print(f"✅ Photo saved: {photo_url}")
                     
                 except Exception as e:
                     print(f"❌ Error saving photo: {e}")
             
-            # Prepare data for all systems
-            report_data = {
-                'address': address,
-                'flood_height': flood_height,
-                'reporter_name': reporter_name,
-                'reporter_phone': reporter_phone or '',
-                'ip_address': client_ip,
-                'photo_url': photo_url or ''
-            }
-            
-            # ========== SIMPAN KE SQLITE ==========
+            # ========== SIMPAN KE SQLITE DATABASE ==========
+            print("📊 Saving to SQLite database...")
             report_id = self.flood_model.create_report(
                 address=address,
                 flood_height=flood_height,
@@ -93,33 +86,35 @@ class FloodReportController:
             if not report_id:
                 if photo_path and os.path.exists(photo_path):
                     os.remove(photo_path)
-                return False, "❌ Gagal menyimpan laporan ke database"
+                return False, "❌ Gagal menyimpan laporan ke database lokal"
             
-            print(f"✅ Report saved to SQLite database (ID: {report_id})")
+            print(f"✅ Saved to SQLite (ID: {report_id})")
             
-            # ========== SIMPAN KE GOOGLE SHEETS SEMUA TAB ==========
+            # ========== SIMPAN KE GOOGLE SHEETS TAB 1 ==========
             if self.sheets_model and self.sheets_model.client:
                 try:
-                    # Simpan ke flood_reports (TAB 1)
-                    success1 = self.sheets_model.save_flood_report(report_data)
+                    print("☁️ Saving to Google Sheets...")
+                    sheets_data = {
+                        'address': address,
+                        'flood_height': flood_height,
+                        'reporter_name': reporter_name,
+                        'reporter_phone': reporter_phone or '',
+                        'ip_address': client_ip,
+                        'photo_url': photo_url or ''
+                    }
                     
-                    # Simpan ke daily_reports (Laporan Harian)
-                    success2 = self.sheets_model.save_daily_report(report_data)
-                    
-                    # Simpan ke monthly_reports (Rekapan Bulanan)
-                    success3 = self.sheets_model.save_monthly_report(report_data)
-                    
-                    if success1 and success2 and success3:
-                        print("✅ Report saved to ALL Google Sheets tabs")
+                    success = self.sheets_model.save_flood_report(sheets_data)
+                    if success:
+                        print("✅ Report saved to Google Sheets")
                     else:
-                        print("⚠️ Report partially saved to Google Sheets")
+                        print("⚠️ Failed to save to Google Sheets")
                         
                 except Exception as e:
                     print(f"⚠️ Error saving to Google Sheets: {e}")
             else:
                 print("ℹ️ Google Sheets not available, only saved to SQLite")
             
-            return True, "✅ Laporan berhasil dikirim ke semua sistem!"
+            return True, "✅ Laporan berhasil dikirim!"
                 
         except Exception as e:
             print(f"❌ Error in submit_report: {e}")
@@ -150,6 +145,7 @@ class FloodReportController:
         try:
             if 'user_ip' not in st.session_state:
                 import random
+                # Generate IP address untuk testing
                 st.session_state.user_ip = f"192.168.1.{random.randint(1, 255)}"
             return st.session_state.user_ip
         except:
