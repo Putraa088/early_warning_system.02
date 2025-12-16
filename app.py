@@ -327,20 +327,25 @@ st.markdown(CSS_THEME, unsafe_allow_html=True)
 # ==================== INIT CONTROLLERS IN SESSION ====================
 if 'controllers_initialized' not in st.session_state:
     try:
+        print("🔄 Initializing controllers...")
         st.session_state.visitor_controller = VisitorController()
-        st.session_state.flood_controller = FloodReportController()
+        st.session_state.flood_controller = FloodReportController()  # FIXED: Gunakan FloodReportController
         st.session_state.realtime_controller = RealTimeDataController()
         st.session_state.controllers_initialized = True
-    except Exception:
+        print("✅ All controllers initialized successfully")
+    except Exception as e:
+        print(f"❌ Error initializing controllers: {e}")
+        import traceback
+        traceback.print_exc()
         st.session_state.controllers_initialized = False
 
 if st.session_state.controllers_initialized:
     visitor_controller = st.session_state.visitor_controller
-    flood_controller = st.session_state.flood_controller
+    flood_controller = st.session_state.flood_controller  # FIXED: Gunakan flood_controller
     realtime_controller = st.session_state.realtime_controller
 else:
     visitor_controller = VisitorController()
-    flood_controller = FloodReportController()
+    flood_controller = FloodReportController()  # FIXED: Gunakan FloodReportController
     realtime_controller = RealTimeDataController()
 
 # ==================== SIDEBAR NAVIGATION ====================
@@ -869,5 +874,6 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
+
 
 
