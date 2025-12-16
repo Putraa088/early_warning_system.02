@@ -43,28 +43,42 @@ class FloodReportModel:
         wib_time = utc_now + timedelta(hours=7)
         return wib_time
     
-    def create_report(self, address, flood_height, reporter_name, 
-                      reporter_phone=None, photo_path=None, ip_address=None):
-        """Create new flood report with WIB timestamp"""
-        try:
-            # Gunakan waktu WIB
-            wib_time = self.get_wib_time()
-            timestamp = wib_time.strftime("%Y-%m-%d %H:%M:%S")
+def create_report(self, address, flood_height, reporter_name, 
+                  reporter_phone=None, photo_path=None, ip_address=None):
+    """Create new flood report with WIB timestamp"""
+    try:
+        wib_time = self.get_wib_time()
+        timestamp = wib_time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # DEBUG PRINT
+        print(f"MODEL DEBUG: Creating report with data:")
+        print(f"  timestamp: {timestamp}")
+        print(f"  address: {address}")
+        print(f"  flood_height: {flood_height}")
+        print(f"  reporter_name: {reporter_name}")
+        print(f"  reporter_phone: {reporter_phone}")
+        print(f"  photo_path: {photo_path}")
+        print(f"  ip_address: {ip_address}")
+        
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO flood_reports 
+                (timestamp, address, flood_height, reporter_name, reporter_phone, photo_path, ip_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (timestamp, address, flood_height, reporter_name, 
+                  reporter_phone, photo_path, ip_address))
+            conn.commit()
             
-            with self.get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO flood_reports 
-                    (timestamp, address, flood_height, reporter_name, reporter_phone, photo_path, ip_address)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (timestamp, address, flood_height, reporter_name, 
-                      reporter_phone, photo_path, ip_address))
-                conn.commit()
-                
-                return cursor.lastrowid
-        except Exception as e:
-            print(f"❌ Error creating report: {e}")
-            return None
+            last_id = cursor.lastrowid
+            print(f"MODEL DEBUG: Last inserted ID: {last_id}")
+            
+            return last_id
+    except Exception as e:
+        print(f"❌ Error creating report in model: {e}")
+        import traceback
+        traceback.print_exc()  # Print full traceback
+        return None
     
     def get_today_reports(self):
         """Get today's reports - TANPA perubahan"""
@@ -156,3 +170,4 @@ class FloodReportModel:
         except Exception as e:
             print(f"❌ Error getting monthly statistics: {e}")
             return {'total_reports': 0, 'avg_flood_height': 0, 'month': current_month}
+
