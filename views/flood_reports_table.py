@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 def show_current_month_reports(controller):
-    """Display current month's reports - TERBARU DI ATAS"""
+    """Display current month's reports - FIXED untuk controller baru"""
     
     st.markdown("""
     <style>
@@ -18,54 +18,69 @@ def show_current_month_reports(controller):
     </style>
     """, unsafe_allow_html=True)
     
-    # Get today's reports (sudah terurut dari terbaru)
-    reports = controller.get_today_reports()
+    # Get today's reports
+    reports = controller.get_today_reports()  # FIXED: Gunakan method yang benar
     
     if not reports:
-        st.info("Tidak ada laporan banjir untuk hari ini.")
+        st.info("📭 Tidak ada laporan banjir untuk hari ini.")
         return
     
     st.markdown("---")
     
-    # Header dengan informasi urutan
-    st.markdown(f"### Daftar Laporan")
+    # Header
+    st.markdown(f"### 📋 Daftar Laporan Hari Ini ({len(reports)} laporan)")
     
-    # Display reports (sudah terurut dari terbaru)
+    # Display reports
     for i, report in enumerate(reports, 1):
         col1, col2, col3, col4, col5, col6 = st.columns([3, 2, 2, 2, 1, 2])
         
         with col1:
             st.write(f"**{i}. {report['address']}**")
+            st.caption(f"ID: {report['id']} | {report['report_time']}")
         
         with col2:
-            st.write(report['flood_height'])
+            st.write(f"**{report['flood_height']}**")
         
         with col3:
-            st.write(format_date(report['report_date']))
+            date_display = format_date(report['report_date'])
+            st.write(date_display)
         
         with col4:
-            st.write(report['report_time'])
+            # Format time jika ada
+            time_display = report['report_time'][:5] if report['report_time'] and len(report['report_time']) >= 5 else "N/A"
+            st.write(time_display)
         
         with col5:
             st.write(report['reporter_name'])
         
         with col6:
-            if report['photo_path']:
-                if st.button("Lihat", key=f"view_{i}", use_container_width=True):
+            if report['photo_path'] and os.path.exists(report['photo_path']):
+                if st.button("📷 Lihat", key=f"view_{report['id']}", use_container_width=True):
                     with st.expander(f"Foto - {report['address']}"):
-                        if os.path.exists(report['photo_path']):
+                        try:
                             st.image(report['photo_path'], use_column_width=True)
-                        else:
-                            st.warning("Foto tidak ditemukan")
+                        except Exception as e:
+                            st.warning(f"Gagal menampilkan foto: {e}")
             else:
-                st.write("Tidak ada")
+                st.write("📭 Tidak ada")
         
         if i < len(reports):
             st.divider()
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Summary
+    with st.expander("📊 Statistik Hari Ini"):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Laporan", len(reports))
+        with col2:
+            unique_locations = len(set(r['address'] for r in reports))
+            st.metric("Lokasi Berbeda", unique_locations)
+        with col3:
+            reporters = len(set(r['reporter_name'] for r in reports))
+            st.metric("Pelapor Berbeda", reporters)
 
 def format_date(date_string):
+    """Format date untuk display"""
     try:
         date_obj = datetime.strptime(date_string, '%Y-%m-%d')
         days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
