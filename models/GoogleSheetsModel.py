@@ -2,21 +2,14 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import streamlit as st
-import json
 import os
 
 class GoogleSheetsModel:
     def __init__(self):
+        """Initialize Google Sheets connection"""
         self.client = None
         self.spreadsheet = None
-        
-        try:
-            import gspread
-            from oauth2client.service_account import ServiceAccountCredentials
-            self.setup_connection()
-        except ImportError as e:
-            print(f"⚠️ Google Sheets dependencies tidak terinstall: {e}")
-            print("⚠️ Mode fallback: Data hanya disimpan di SQLite lokal")
+        self.setup_connection()
     
     def setup_connection(self):
         """Setup connection to Google Sheets"""
@@ -27,11 +20,11 @@ class GoogleSheetsModel:
                 'https://www.googleapis.com/auth/drive'
             ]
             
-            # Dapatkan credentials dari Streamlit Secrets atau file lokal
             creds = None
             
+            # Coba dari Streamlit Secrets (production)
             if 'GOOGLE_SHEETS' in st.secrets:
-                # Jika di Streamlit Cloud (pakai secrets)
+                print("✅ Using Streamlit Secrets for Google Sheets")
                 credentials_dict = {
                     "type": "service_account",
                     "project_id": st.secrets["GOOGLE_SHEETS"]["project_id"],
@@ -46,21 +39,24 @@ class GoogleSheetsModel:
                 }
                 creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
             elif os.path.exists('credentials.json'):
-                # Jika lokal (pakai file credentials.json)
+                # Jika lokal (development)
+                print("✅ Using local credentials.json for Google Sheets")
                 creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
             else:
                 print("⚠️ Google Sheets credentials tidak ditemukan")
-                self.client = None
                 return
             
             # Authorize client
             self.client = gspread.authorize(creds)
             
-            # Buka spreadsheet (ID dari secrets atau hardcode)
-            spreadsheet_id = st.secrets.get("GOOGLE_SHEETS", {}).get("SPREADSHEET_ID", "YOUR_SPREADSHEET_ID_HERE")
-            self.spreadsheet = self.client.open_by_key(spreadsheet_id)
+            # Buka spreadsheet
+            spreadsheet_id = st.secrets.get("GOOGLE_SHEETS", {}).get("SPREADSHEET_ID", "")
+            if not spreadsheet_id:
+                print("⚠️ SPREADSHEET_ID tidak ditemukan")
+                return
             
-            print("✅ Google Sheets connected successfully")
+            self.spreadsheet = self.client.open_by_key(spreadsheet_id)
+            print(f"✅ Google Sheets connected: {self.spreadsheet.title}")
             
         except Exception as e:
             print(f"❌ Error connecting to Google Sheets: {e}")
@@ -70,20 +66,25 @@ class GoogleSheetsModel:
     def get_worksheet(self, sheet_name):
         """Get worksheet by name"""
         if not self.spreadsheet:
+            print(f"❌ Spreadsheet not initialized")
             return None
         
         try:
             return self.spreadsheet.worksheet(sheet_name)
+        except gspread.exceptions.WorksheetNotFound:
+            print(f"❌ Worksheet '{sheet_name}' not found")
+            return None
         except Exception as e:
-            print(f"❌ Error getting worksheet '{sheet_name}': {e}")
+            print(f"❌ Error getting worksheet: {e}")
             return None
     
+    # ========== TAB 1: flood_reports ==========
+    
     def save_flood_report(self, report_data):
-        """Save flood report to Google Sheets"""
+        """Save flood report to Google Sheets (TAB 1)"""
         try:
             ws = self.get_worksheet("flood_reports")
             if not ws:
-                print("❌ Worksheet 'flood_reports' not found")
                 return False
             
             # Prepare data row
@@ -105,7 +106,7 @@ class GoogleSheetsModel:
             return True
             
         except Exception as e:
-            print(f"❌ Error saving to Google Sheets: {e}")
+            print(f"❌ Error saving flood report: {e}")
             return False
     
     def get_recent_reports(self, limit=100):
@@ -115,7 +116,7 @@ class GoogleSheetsModel:
             if not ws:
                 return []
             
-            # Get all data (skip header row)
+            # Get all data
             all_data = ws.get_all_values()
             if len(all_data) <= 1:  # Only header or empty
                 return []
@@ -130,21 +131,37 @@ class GoogleSheetsModel:
             
             reports = []
             for row in recent_rows:
-                report = {headers[i]: row[i] if i < len(row) else '' for i in range(len(headers))}
-                reports.append(report)
+                if len(row) >= len(headers):  # Ensure row has enough columns
+                    report = {headers[i]: row[i] for i in range(len(headers))}
+                    reports.append(report)
             
             return reports
             
         except Exception as e:
-            print(f"❌ Error getting reports from Google Sheets: {e}")
+            print(f"❌ Error getting reports: {e}")
             return []
     
+    # ========== TAB 2: predictions ==========
+    
     def save_prediction(self, prediction_data):
-        """Save prediction data to Google Sheets"""
+        """Save prediction data to Google Sheets (TAB 2)"""
         try:
             ws = self.get_worksheet("predictions")
             if not ws:
-                return False
+                print("❌ Creating predictions worksheet...")
+                try:
+                    ws = self.spreadsheet.add_worksheet(title="predictions", rows=1000, cols=10)
+                    # Add headers
+                    headers = [
+                        "Timestamp", "Location", "Rainfall", "Water Level", 
+                        "Humidity", "Temp Min", "Temp Max", "Risk Level", 
+                        "Status", "Message"
+                    ]
+                    ws.append_row(headers)
+                    print("✅ Created predictions worksheet with headers")
+                except Exception as e:
+                    print(f"❌ Failed to create predictions worksheet: {e}")
+                    return False
             
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             row = [
@@ -168,12 +185,51 @@ class GoogleSheetsModel:
             print(f"❌ Error saving prediction: {e}")
             return False
     
+    def get_predictions(self, limit=100):
+        """Get recent predictions from Google Sheets"""
+        try:
+            ws = self.get_worksheet("predictions")
+            if not ws:
+                return []
+            
+            all_data = ws.get_all_values()
+            if len(all_data) <= 1:
+                return []
+            
+            headers = all_data[0]
+            rows = all_data[1:]
+            
+            recent_rows = rows[-limit:] if len(rows) > limit else rows
+            recent_rows.reverse()
+            
+            predictions = []
+            for row in recent_rows:
+                if len(row) >= len(headers):
+                    prediction = {headers[i]: row[i] for i in range(min(len(headers), len(row)))}
+                    predictions.append(prediction)
+            
+            return predictions
+            
+        except Exception as e:
+            print(f"❌ Error getting predictions: {e}")
+            return []
+    
+    # ========== TAB 3: monthly_stats ==========
+    
     def update_statistics(self, stats_data):
-        """Update monthly statistics in Google Sheets"""
+        """Update monthly statistics in Google Sheets (TAB 3)"""
         try:
             ws = self.get_worksheet("monthly_stats")
             if not ws:
-                return False
+                print("❌ Creating monthly_stats worksheet...")
+                try:
+                    ws = self.spreadsheet.add_worksheet(title="monthly_stats", rows=100, cols=6)
+                    headers = ["Month", "Total Reports", "Avg Risk", "High Risk Days", "Most Affected Area", "Response Time Avg"]
+                    ws.append_row(headers)
+                    print("✅ Created monthly_stats worksheet with headers")
+                except Exception as e:
+                    print(f"❌ Failed to create monthly_stats worksheet: {e}")
+                    return False
             
             current_month = datetime.now().strftime("%Y-%m")
             
@@ -186,13 +242,16 @@ class GoogleSheetsModel:
                     continue
                 if row and row[0] == current_month:
                     # Update existing row
-                    ws.update(f'A{i+1}:D{i+1}', [[
+                    ws.update(f'A{i+1}:F{i+1}', [[
                         current_month,
                         stats_data.get('total_reports', 0),
                         stats_data.get('avg_risk', 0),
-                        stats_data.get('high_risk_days', 0)
+                        stats_data.get('high_risk_days', 0),
+                        stats_data.get('most_affected_area', ''),
+                        stats_data.get('response_time_avg', 0)
                     ]])
                     month_exists = True
+                    print(f"✅ Updated existing row for {current_month}")
                     break
             
             if not month_exists:
@@ -201,12 +260,37 @@ class GoogleSheetsModel:
                     current_month,
                     stats_data.get('total_reports', 0),
                     stats_data.get('avg_risk', 0),
-                    stats_data.get('high_risk_days', 0)
+                    stats_data.get('high_risk_days', 0),
+                    stats_data.get('most_affected_area', ''),
+                    stats_data.get('response_time_avg', 0)
                 ])
+                print(f"✅ Added new row for {current_month}")
             
-            print(f"✅ Statistics updated for {current_month}")
             return True
             
         except Exception as e:
             print(f"❌ Error updating statistics: {e}")
             return False
+    
+    def get_statistics(self):
+        """Get monthly statistics from Google Sheets"""
+        try:
+            ws = self.get_worksheet("monthly_stats")
+            if not ws:
+                return {}
+            
+            all_data = ws.get_all_values()
+            if len(all_data) <= 1:
+                return {}
+            
+            headers = all_data[0]
+            latest_row = all_data[-1]  # Get last row (most recent)
+            
+            if len(latest_row) >= len(headers):
+                return {headers[i]: latest_row[i] for i in range(min(len(headers), len(latest_row)))}
+            
+            return {}
+            
+        except Exception as e:
+            print(f"❌ Error getting statistics: {e}")
+            return {}
