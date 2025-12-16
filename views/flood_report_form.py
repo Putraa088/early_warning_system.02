@@ -1,12 +1,12 @@
 import streamlit as st
 
 def show_flood_report_form(controller):
-    """Show flood report form - TIDAK ADA PERUBAHAN"""
+    """Show flood report form with dropdown for flood height"""
+    
+    st.markdown("### Formulir Laporan Banjir")
     
     with st.form("flood_report_form"):
-        st.markdown("### Formulir Laporan Banjir")
-        
-        # Form fields - TANPA PERUBAHAN
+        # Input alamat
         address = st.text_area(
             "Lokasi Kejadian*",
             placeholder="Contoh: Jl. Diponegoro No. 52, Salatiga, Jawa Tengah",
@@ -16,13 +16,27 @@ def show_flood_report_form(controller):
         col1, col2 = st.columns(2)
         
         with col1:
-            flood_height = st.number_input(
-                "Tinggi Banjir (cm)*",
-                min_value=0.0,
-                max_value=500.0,
-                step=0.1,
-                help="Tinggi genangan air dalam centimeter"
+            # DROPDOWN untuk tinggi banjir (pilihan, bukan angka manual)
+            flood_options = {
+                "Pilih tinggi banjir": 0,
+                "Rendah (10-30 cm)": 20,
+                "Sedang (31-70 cm)": 50,
+                "Tinggi (71-150 cm)": 100,
+                "Sangat Tinggi (>150 cm)": 200
+            }
+            
+            flood_height_text = st.selectbox(
+                "Tinggi Banjir*",
+                options=list(flood_options.keys()),
+                help="Pilih kategori tinggi banjir"
             )
+            
+            # Ambil nilai numerik dari pilihan
+            flood_height = flood_options[flood_height_text]
+            
+            # Tampilkan nilai yang dipilih
+            if flood_height > 0:
+                st.info(f"Tinggi banjir: {flood_height} cm")
         
         with col2:
             reporter_name = st.text_input(
