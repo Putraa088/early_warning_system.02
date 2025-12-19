@@ -4,7 +4,7 @@ def show_flood_report_form(controller):
     """Display flood report form with simple design"""
     
     with st.container():
-        st.markdown("### 📝 Form Laporan Banjir")
+        st.markdown("###  Form Laporan Banjir")
         st.caption("Isi form di bawah untuk melaporkan kejadian banjir di sekitar Anda")
         
         with st.form("flood_report_form", clear_on_submit=True):
@@ -45,7 +45,7 @@ def show_flood_report_form(controller):
             
             # Submit button
             submitted = st.form_submit_button(
-                "📤 Kirim Laporan",
+                " Kirim Laporan",
                 type="primary",
                 use_container_width=True
             )
@@ -85,7 +85,7 @@ def show_flood_report_form(controller):
                             st.balloons()  # Celebration animation
                             
                             # Show confirmation
-                            with st.expander("📋 Detail Laporan Anda", expanded=True):
+                            with st.expander(" Detail Laporan Anda", expanded=True):
                                 st.write(f"**Alamat:** {address}")
                                 st.write(f"**Tinggi Banjir:** {flood_height}")
                                 st.write(f"**Nama Pelapor:** {reporter_name}")
@@ -106,3 +106,4 @@ def show_flood_report_form(controller):
                     except Exception as e:
                         st.error(f"❌ Terjadi kesalahan sistem: {str(e)}")
                         st.info("Silakan coba lagi atau hubungi admin.")
+
