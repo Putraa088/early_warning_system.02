@@ -1,5 +1,6 @@
 from models.FloodReportModel import FloodReportModel
 from models.GoogleSheetsModel import GoogleSheetsModel
+from models.GoogleDriveModel import GoogleDriveModel  
 import os
 import uuid
 from datetime import datetime
@@ -10,50 +11,42 @@ class FloodReportController:
     def __init__(self):
         self.flood_model = FloodReportModel()
         self.sheets_model = None
-        self.upload_folder = "uploads"
+        self.drive_model = None  
         
-        # Initialize Google Sheets
+        # Initialize services
+        self._initialize_services()
+        
+        print("✅ FloodReportController initialized")
+    
+    def _initialize_services(self):
+        """Initialize semua services"""
+        # Google Sheets
         try:
             self.sheets_model = GoogleSheetsModel()
             if self.sheets_model and hasattr(self.sheets_model, 'client') and self.sheets_model.client:
-                print("✅ Google Sheets connected for flood reports")
+                print("✅ Google Sheets connected")
             else:
-                print("⚠️ Google Sheets offline - using SQLite only")
+                print("⚠️ Google Sheets offline")
                 self.sheets_model = None
         except Exception as e:
             print(f"⚠️ Google Sheets init error: {e}")
             self.sheets_model = None
         
-        # Create upload folder
-        self._ensure_upload_folder()
-        print("✅ FloodReportController initialized")
-    
-    def _ensure_upload_folder(self):
-        """Ensure upload folder exists"""
+        # Google Drive ✅ TAMBAH INI
         try:
-            if not os.path.exists(self.upload_folder):
-                os.makedirs(self.upload_folder)
-                print(f"✅ Created upload folder: {os.path.abspath(self.upload_folder)}")
+            self.drive_model = GoogleDriveModel()
+            if self.drive_model and self.drive_model.service:
+                print("✅ Google Drive connected")
             else:
-                print(f"✅ Upload folder exists: {self.upload_folder}")
+                print("⚠️ Google Drive offline")
+                self.drive_model = None
         except Exception as e:
-            print(f"❌ Error creating upload folder: {e}")
-    
-    def check_daily_limit(self, ip_address):
-        """Check if daily limit (10 reports per IP) has been reached"""
-        try:
-            today_count = self.flood_model.get_today_reports_count_by_ip(ip_address)
-            can_submit = today_count < 10
-            print(f"📊 Daily limit check: IP={ip_address}, Count={today_count}, CanSubmit={can_submit}")
-            return can_submit
-        except Exception as e:
-            print(f"⚠️ Error in check_daily_limit: {e}")
-            return True
+            print(f"⚠️ Google Drive init error: {e}")
+            self.drive_model = None
     
     def submit_report(self, address, flood_height, reporter_name, reporter_phone=None, photo_file=None):
-        """Submit new flood report"""
-        photo_path = None
-        photo_filename = None
+        """Submit new flood report dengan Google Drive untuk foto"""
+        photo_info = None  # Untuk menyimpan info foto dari Google Drive
         
         try:
             # Get client IP
@@ -64,136 +57,148 @@ class FloodReportController:
             if not self.check_daily_limit(client_ip):
                 return False, "❌ Anda telah mencapai batas maksimal 10 laporan per hari."
             
-            # Handle photo upload (OPTIONAL)
+            # Handle photo upload ke Google Drive
             if photo_file is not None:
-                try:
-                    file_extension = photo_file.name.split('.')[-1].lower()
-                    valid_extensions = ['jpg', 'jpeg', 'png', 'gif']
-                    
-                    if file_extension not in valid_extensions:
-                        return False, f"❌ Format file tidak didukung. Gunakan: {', '.join(valid_extensions)}"
-                    
-                    photo_filename = f"{uuid.uuid4()}.{file_extension}"
-                    photo_path = os.path.join(self.upload_folder, photo_filename)
-                    
-                    print(f"📸 Saving photo to: {photo_path}")
-                    
-                    # Save photo
-                    with open(photo_path, "wb") as f:
-                        f.write(photo_file.getbuffer())
-                    
-                    print(f"✅ Photo saved: {photo_filename}")
-                    
-                except Exception as e:
-                    print(f"⚠️ Error saving photo: {e}")
-                    # Lanjutkan tanpa foto jika error
-                    photo_path = None
-                    photo_filename = None
+                photo_info = self._handle_photo_upload_drive(photo_file)
+                if photo_info is False:  # Jika ada error validasi
+                    return False, "❌ Error uploading photo"
             
-            # STEP 1: Create report in SQLite database
-            print("💾 Saving to SQLite database...")
+            # STEP 1: Coba save ke Google Sheets (PRIMARY)
+            gs_success = False
+            gs_message = ""
             
-            report_id = self.flood_model.create_report(
-                address=address,
-                flood_height=flood_height,
-                reporter_name=reporter_name,
-                reporter_phone=reporter_phone,
-                photo_path=photo_path,
-                ip_address=client_ip
-            )
-            
-            if not report_id:
-                print("❌ Failed to save to SQLite")
-                # Cleanup photo if exists
-                if photo_path and os.path.exists(photo_path):
-                    try:
-                        os.remove(photo_path)
-                    except:
-                        pass
-                return False, "❌ Gagal menyimpan laporan ke database lokal."
-            
-            print(f"✅ SQLite save successful! Report ID: {report_id}")
-            
-            # STEP 2: Save to Google Sheets (if available)
-            if self.sheets_model and self.sheets_model.client:
+            if self.sheets_model and hasattr(self.sheets_model, 'client') and self.sheets_model.client:
                 try:
                     print("📊 Saving to Google Sheets...")
                     
-                    # Prepare data untuk Google Sheets
+                    # Prepare data
                     sheets_data = {
                         'address': str(address),
                         'flood_height': str(flood_height),
                         'reporter_name': str(reporter_name),
                         'reporter_phone': str(reporter_phone) if reporter_phone else '',
                         'ip_address': str(client_ip),
-                        'photo_url': f"uploads/{photo_filename}" if photo_filename else ''
+                        'photo_url': photo_info['view_url'] if photo_info else ''  # Google Drive link
                     }
                     
-                    print(f"📋 Google Sheets data prepared")
+                    gs_success = self.sheets_model.save_flood_report(sheets_data)
                     
-                    success = self.sheets_model.save_flood_report(sheets_data)
-                    if success:
+                    if gs_success:
                         print("✅ Report saved to Google Sheets")
-                        gs_status = " (dan Google Sheets)"
+                        gs_message = "Google Sheets"
                     else:
                         print("⚠️ Failed to save to Google Sheets")
-                        gs_status = " (Google Sheets gagal)"
+                        gs_message = " (Google Sheets gagal)"
+                        
                 except Exception as e:
                     print(f"⚠️ Error saving to Google Sheets: {e}")
-                    gs_status = " (Google Sheets error)"
+                    gs_message = " (Google Sheets error)"
             else:
                 print("ℹ️ Google Sheets not available")
-                gs_status = ""
+                gs_message = ""
             
-            # STEP 3: Verify data was saved
-            today_reports = self.flood_model.get_today_reports()
-            print(f"✅ Verification: Total reports today = {len(today_reports)}")
+            # STEP 2: Coba save ke SQLite (BACKUP - opsional)
+            sqlite_success = False
+            sqlite_message = ""
             
-            return True, f"✅ Laporan berhasil dikirim! Data telah disimpan di database{gs_status}."
+            try:
+                if self.flood_model:
+                    print("💾 Saving to SQLite (backup)...")
+                    
+                    # Gunakan Google Drive URL jika ada
+                    photo_url_for_sqlite = photo_info['direct_url'] if photo_info else None
+                    
+                    report_id = self.flood_model.create_report(
+                        alamat=address,
+                        tinggi_banjir=flood_height,
+                        nama_pelapor=reporter_name,
+                        no_hp=reporter_phone,
+                        photo_url=photo_url_for_sqlite,  # Direct image URL
+                        ip_address=client_ip
+                    )
+                    
+                    if report_id:
+                        sqlite_success = True
+                        sqlite_message = "SQLite backup"
+                        print(f"✅ SQLite backup saved (ID: {report_id})")
+                    else:
+                        print("⚠️ SQLite backup failed")
+            except Exception as e:
+                print(f"⚠️ SQLite error: {e}")
+            
+            # STEP 3: Prepare success message
+            messages = []
+            if gs_success:
+                messages.append("Google Sheets")
+            if sqlite_success:
+                messages.append("SQLite backup")
+            if photo_info:
+                messages.append("Google Drive (foto)")
+            
+            if messages:
+                success_message = f"✅ Laporan berhasil dikirim! Tersimpan di: {', '.join(messages)}"
+                
+                # Jika ada foto di Google Drive, tambahkan info
+                if photo_info:
+                    success_message += f"\n📷 Foto dapat dilihat di: {photo_info['view_url']}"
+                
+                return True, success_message
+            else:
+                return False, "❌ Gagal menyimpan laporan ke semua sistem"
                 
         except Exception as e:
             print(f"❌ CRITICAL Error in submit_report: {e}")
             traceback.print_exc()
             
-            # Cleanup on error
-            if photo_path and os.path.exists(photo_path):
+            # Cleanup: Hapus foto dari Google Drive jika upload gagal
+            if photo_info and 'file_id' in photo_info:
                 try:
-                    os.remove(photo_path)
+                    self.drive_model.delete_file(photo_info['file_id'])
                 except:
                     pass
             
             return False, f"❌ Error sistem: {str(e)}"
     
-    # ============ FUNGSI UNTUK VIEWS ============
-    
-    def get_today_reports(self):
-        """Get today's flood reports"""
-        return self.flood_model.get_today_reports()
-    
-    def get_month_reports(self):
-        """Get this month's flood reports"""
-        return self.flood_model.get_month_reports()
-    
-    def get_all_reports(self):
-        """Get all flood reports"""
-        return self.flood_model.get_all_reports()
-    
-    def get_monthly_statistics(self):
-        """Get monthly statistics for reports"""
-        return self.flood_model.get_monthly_statistics()
-    
-    def get_client_ip(self):
-        """Get client IP address"""
+    def _handle_photo_upload_drive(self, photo_file):
+        """Upload photo ke Google Drive"""
         try:
-            # Generate a consistent IP for the session
-            if 'user_ip' not in st.session_state:
-                import random
-                st.session_state.user_ip = f"192.168.{random.randint(1, 255)}.{random.randint(1, 255)}"
+            # Validasi file
+            file_extension = photo_file.name.split('.')[-1].lower()
+            valid_extensions = ['jpg', 'jpeg', 'png', 'gif']
             
-            ip = st.session_state.user_ip
-            print(f"🖥️ Using IP: {ip}")
-            return ip
+            if file_extension not in valid_extensions:
+                print(f"❌ Invalid file extension: {file_extension}")
+                return False
             
+            # Check file size (max 5MB)
+            photo_file.seek(0, os.SEEK_END)
+            file_size = photo_file.tell()
+            photo_file.seek(0)
+            
+            if file_size > 5 * 1024 * 1024:
+                print("❌ File too large (max 5MB)")
+                return False
+            
+            # Baca file bytes
+            file_bytes = photo_file.getbuffer().tobytes()
+            
+            # Generate unique filename
+            filename = f"{uuid.uuid4()}.{file_extension}"
+            
+            # Upload ke Google Drive
+            if self.drive_model and self.drive_model.service:
+                upload_result = self.drive_model.upload_photo(file_bytes, filename)
+                
+                if upload_result:
+                    print(f"✅ Photo uploaded to Google Drive: {upload_result['view_url']}")
+                    return upload_result
+                else:
+                    print("❌ Google Drive upload failed")
+                    return None
+            else:
+                print("⚠️ Google Drive not available")
+                return None
+                
         except Exception as e:
-            print(f"⚠️ Error getting IP: {e}")
-            return "unknown_user"
+            print(f"❌ Error in photo upload: {e}")
+            return None
