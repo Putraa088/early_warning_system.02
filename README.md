@@ -1,6 +1,6 @@
 #  Sistem Peringatan Dini Banjir
 
-Sistem monitoring dan prediksi banjir berbasis AI dengan Google Sheets integration.
+Sistem monitoring dan prediksi banjir berbasis AI.
 
 ##  Features
 -  AI Prediction menggunakan Neural Network
