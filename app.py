@@ -443,7 +443,6 @@ def show_homepage():
         st.markdown(
             """
             <div class="feature-card">
-                <h3>KECERDASAN BUATAN</h3>
                 <p>Sistem ini membantu memantau kondisi hujan dan ketinggian air untuk memberikan informasi awal mengenai potensi banjir. Data diperbarui secara berkala agar masyarakat dapat memperoleh informasi yang jelas dan terkini..</p>
                 <ul style="color: #dfe9ec; padding-left: 20px;">
                 </ul>
@@ -456,13 +455,11 @@ def show_homepage():
         st.markdown(
             """
             <div class="feature-card">
-                <h3>ANALISIS STATISTIK</h3>
-                <p>Distribusi Gumbel untuk analisis nilai ekstrem dan perhitungan periode ulang banjir.</p>
+                <h3>Manfaat Sistem ini?</h3>
                 <ul style="color: #dfe9ec; padding-left: 20px;">
-                    <li>Probabilitas kejadian ekstrem</li>
-                    <li>Periode ulang 5-50 tahun</li>
-                    <li>Risk assessment terstruktur</li>
-                    <li>Visualisasi data interaktif</li>
+                    <li>Membantu meningkatkan kewaspadaan terhadap banjir</li>
+                    <li>Mendukung persiapan dini dan pengambilan langkah pencegahan</li>
+                    <li>Menyediakan informasi yang mudah dipahami dan diakses</li>
                 </ul>
             </div>
             """,
@@ -845,4 +842,5 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
+
 
