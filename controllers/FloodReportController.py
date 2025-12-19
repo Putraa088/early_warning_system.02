@@ -5,6 +5,8 @@ import uuid
 from datetime import datetime
 import streamlit as st
 import traceback
+import sqlite3
+from datetime import timedelta
 
 class FloodReportController:
     def __init__(self):
@@ -167,6 +169,82 @@ class FloodReportController:
     def get_monthly_statistics(self):
         """Get monthly statistics for reports"""
         return self.flood_model.get_monthly_statistics()
+    
+    def get_yearly_statistics(self):
+        """Get yearly flood report statistics for the last 12 months"""
+        try:
+            conn = sqlite3.connect('flood_system.db')
+            cursor = conn.cursor()
+            
+            # Dapatkan bulan dan tahun saat ini
+            current_date = datetime.now()
+            current_year_month = current_date.strftime('%Y-%m')
+            
+            # Generate list 12 bulan terakhir
+            months_data = []
+            for i in range(11, -1, -1):  # 11 bulan sebelumnya + bulan ini
+                # Hitung bulan
+                month_offset = i
+                target_date = current_date - timedelta(days=30*month_offset)
+                year_month = target_date.strftime('%Y-%m')
+                month_name = target_date.strftime('%b')  # Jan, Feb, dst
+                
+                # Query jumlah laporan untuk bulan ini
+                query = """
+                SELECT COUNT(*) as report_count
+                FROM flood_reports 
+                WHERE strftime('%Y-%m', report_date) = ?
+                """
+                
+                cursor.execute(query, (year_month,))
+                result = cursor.fetchone()
+                report_count = result[0] if result else 0
+                
+                # Tentukan jika ini bulan berjalan
+                is_current = (year_month == current_year_month)
+                
+                months_data.append({
+                    'year_month': year_month,
+                    'month_name': month_name,
+                    'report_count': report_count,
+                    'is_current': is_current
+                })
+            
+            conn.close()
+            
+            # Hitung total dan rata-rata
+            total_reports = sum(item['report_count'] for item in months_data)
+            avg_per_month = total_reports / len(months_data) if months_data else 0
+            
+            # Cari bulan dengan laporan terbanyak
+            if months_data:
+                max_item = max(months_data, key=lambda x: x['report_count'])
+                max_month = max_item['month_name']
+                max_count = max_item['report_count']
+            else:
+                max_month = "Tidak ada data"
+                max_count = 0
+            
+            return {
+                'months_data': months_data,
+                'total_reports': total_reports,
+                'avg_per_month': round(avg_per_month, 1),
+                'max_month': max_month,
+                'max_count': max_count,
+                'current_year_month': current_year_month
+            }
+            
+        except Exception as e:
+            print(f"❌ Error getting yearly statistics: {e}")
+            traceback.print_exc()
+            return {
+                'months_data': [],
+                'total_reports': 0,
+                'avg_per_month': 0,
+                'max_month': "Error",
+                'max_count': 0,
+                'current_year_month': ""
+            }
     
     def get_client_ip(self):
         """Get client IP address"""
