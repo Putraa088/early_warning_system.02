@@ -44,6 +44,17 @@ class FloodReportController:
             print(f"⚠️ Google Drive init error: {e}")
             self.drive_model = None
     
+    def check_daily_limit(self, ip_address):
+        """Check if daily limit (10 reports per IP) has been reached"""
+        try:
+            today_count = self.flood_model.get_today_reports_count_by_ip(ip_address)
+            can_submit = today_count < 10
+            print(f"📊 Daily limit check: IP={ip_address}, Count={today_count}, CanSubmit={can_submit}")
+            return can_submit
+        except Exception as e:
+            print(f"⚠️ Error in check_daily_limit: {e}")
+            return True
+    
     def submit_report(self, address, flood_height, reporter_name, reporter_phone=None, photo_file=None):
         """Submit new flood report dengan Google Drive untuk foto"""
         photo_info = None
@@ -203,23 +214,16 @@ class FloodReportController:
             print(f"❌ Error in photo upload: {e}")
             return None
     
-    def check_daily_limit(self, ip_address):
-        """Check if daily limit (10 reports per IP) has been reached"""
-        try:
-            today_count = self.flood_model.get_today_reports_count_by_ip(ip_address)
-            can_submit = today_count < 10
-            print(f"📊 Daily limit check: IP={ip_address}, Count={today_count}, CanSubmit={can_submit}")
-            return can_submit
-        except Exception as e:
-            print(f"⚠️ Error in check_daily_limit: {e}")
-            return True
-    
-    # ============ FUNGSI UNTUK VIEWS ============
+    # ============ FUNGSI UNTUK VIEWS (WAJIB ADA) ============
     
     def get_today_reports(self):
         """Get today's flood reports"""
         try:
-            return self.flood_model.get_today_reports()
+            if self.flood_model:
+                return self.flood_model.get_today_reports()
+            else:
+                print("⚠️ Flood model not available")
+                return []
         except Exception as e:
             print(f"⚠️ Error getting today reports: {e}")
             return []
@@ -227,7 +231,11 @@ class FloodReportController:
     def get_month_reports(self):
         """Get this month's flood reports"""
         try:
-            return self.flood_model.get_month_reports()
+            if self.flood_model:
+                return self.flood_model.get_month_reports()
+            else:
+                print("⚠️ Flood model not available")
+                return []
         except Exception as e:
             print(f"⚠️ Error getting month reports: {e}")
             return []
@@ -235,7 +243,11 @@ class FloodReportController:
     def get_all_reports(self):
         """Get all flood reports"""
         try:
-            return self.flood_model.get_all_reports()
+            if self.flood_model:
+                return self.flood_model.get_all_reports()
+            else:
+                print("⚠️ Flood model not available")
+                return []
         except Exception as e:
             print(f"⚠️ Error getting all reports: {e}")
             return []
@@ -243,7 +255,11 @@ class FloodReportController:
     def get_monthly_statistics(self):
         """Get monthly statistics for reports"""
         try:
-            return self.flood_model.get_monthly_statistics()
+            if self.flood_model:
+                return self.flood_model.get_monthly_statistics()
+            else:
+                print("⚠️ Flood model not available")
+                return {'total_reports': 0, 'month': ''}
         except Exception as e:
             print(f"⚠️ Error getting statistics: {e}")
             return {'total_reports': 0, 'month': ''}
@@ -274,3 +290,43 @@ class FloodReportController:
         """Check if Google Drive is available"""
         return (self.drive_model is not None and 
                 self.drive_model.service is not None)
+    
+    # ============ FUNGSI TAMBAHAN ============
+    
+    def get_report_count(self):
+        """Get total report count"""
+        try:
+            reports = self.get_all_reports()
+            return len(reports)
+        except:
+            return 0
+    
+    def get_today_report_count(self):
+        """Get today's report count"""
+        try:
+            reports = self.get_today_reports()
+            return len(reports)
+        except:
+            return 0
+    
+    def get_unique_reporters(self):
+        """Get unique reporter count"""
+        try:
+            reports = self.get_all_reports()
+            reporters = set()
+            for report in reports:
+                reporters.add(report.get('Nama Pelapor', report.get('nama_pelapor', '')))
+            return len(reporters)
+        except:
+            return 0
+    
+    def get_unique_locations(self):
+        """Get unique location count"""
+        try:
+            reports = self.get_all_reports()
+            locations = set()
+            for report in reports:
+                locations.add(report.get('Alamat', report.get('alamat', '')))
+            return len(locations)
+        except:
+            return 0
