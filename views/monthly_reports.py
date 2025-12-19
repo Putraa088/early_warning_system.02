@@ -110,10 +110,9 @@ def format_time(time_string):
 
     try:
         if time_string and len(time_string) >= 5:
-            return time_string[:5]  # HH:MM
+            return time_string[:5]
         return ""
     except:
         return ""
-
 
 
