@@ -5,7 +5,7 @@ def show_flood_report_form(controller):
     
     with st.container():
         st.markdown("###  Form Laporan Banjir")
-        st.caption("Isi form di bawah untuk melaporkan kejadian banjir di sekitar Anda")
+        st.caption("Isi form di bawah untuk melaporkan kondisi banjir di sekitar Anda")
         
         with st.form("flood_report_form", clear_on_submit=True):
             # Form fields
@@ -14,14 +14,14 @@ def show_flood_report_form(controller):
             with col1:
                 address = st.text_input(
                     "Alamat Lengkap*",
-                    placeholder="Jl/gang/kelurahan/kecamatan",
+                    placeholder="Jl/Gang/Kelurahan/Kecamatan",
                     help="Masukkan alamat lengkap kejadian banjir"
                 )
                 
                 flood_height = st.selectbox(
                     "Tinggi Banjir*",
                     ["Pilih tinggi banjir", "Setinggi mata kaki", "Setinggi betis", 
-                     "Setinggi lutut", "Lebih dari lutut"]
+                    "Setinggi lutut", "Lebih dari lutut"]
                 )
             
             with col2:
@@ -31,19 +31,19 @@ def show_flood_report_form(controller):
                 )
                 
                 reporter_phone = st.text_input(
-                    "Nomor Telepon (Opsional)",
+                    "Nomor Telepon ",
                     placeholder="0812-3456-7890",
-                    help="Opsional, untuk konfirmasi"
+                    help="untuk konfirmasi"
                 )
             
-            # Photo upload - dijadikan OPTIONAL
+            
             photo_file = st.file_uploader(
-                "Unggah Foto (Opsional)",
+                "Unggah Foto (**WAJIB**)",
                 type=['jpg', 'jpeg', 'png'],
                 help="Upload foto kondisi banjir jika tersedia"
             )
             
-            # Submit button
+            
             submitted = st.form_submit_button(
                 " Kirim Laporan",
                 type="primary",
@@ -52,9 +52,8 @@ def show_flood_report_form(controller):
             
             if submitted:
                 st.write("---")
-                st.info("⏳ Memproses laporan...")
+                st.info(" Memproses laporan....")
                 
-                # VALIDATION
                 errors = []
                 
                 if not address or address.strip() == "":
@@ -70,7 +69,7 @@ def show_flood_report_form(controller):
                     for error in errors:
                         st.error(error)
                 else:
-                    # PROSES SUBMIT
+                    
                     try:
                         success, message = controller.submit_report(
                             address=address.strip(),
@@ -82,28 +81,10 @@ def show_flood_report_form(controller):
                         
                         if success:
                             st.success(message)
-                            st.balloons()  # Celebration animation
-                            
-                            # Show confirmation
-                            with st.expander(" Detail Laporan Anda", expanded=True):
-                                st.write(f"**Alamat:** {address}")
-                                st.write(f"**Tinggi Banjir:** {flood_height}")
-                                st.write(f"**Nama Pelapor:** {reporter_name}")
-                                if reporter_phone:
-                                    st.write(f"**No. Telepon:** {reporter_phone}")
-                                if photo_file:
-                                    st.write("**Foto:** Diunggah")
-                                
-                                st.info("✅ Laporan telah tercatat di:")
-                                st.write("• Database sistem")
-                                st.write("• Laporan harian")
-                                st.write("• Rekapan bulanan")
-                                if hasattr(controller, 'sheets_model') and controller.sheets_model and controller.sheets_model.client:
-                                    st.write("• Google Sheets")
+
                         else:
                             st.error(message)
                             
                     except Exception as e:
                         st.error(f"❌ Terjadi kesalahan sistem: {str(e)}")
                         st.info("Silakan coba lagi atau hubungi admin.")
-
