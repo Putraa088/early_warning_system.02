@@ -146,6 +146,7 @@ CSS_THEME = r"""
   --border: rgba(255,255,255,0.04);
 }
 
+/* KEMBALIKAN SCROLLBAR NORMAL */
 .stApp, .block-container{ 
     background-color: var(--bg) !important; 
     color: #e8eef1 !important; 
@@ -333,6 +334,23 @@ h1,h2,h3{
 .prediction-header {
     text-align: center;
     margin-bottom: 30px;
+}
+
+/* HAPUS ATURAN OVERFLOW HIDDEN */
+.element-container, .st-emotion-cache-1p1nwyz {
+    /* overflow: hidden !important; */ /* DIHAPUS */
+}
+
+/* Pastikan scrollbar normal */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 100% !important;
+}
+
+/* Form container dengan scroll normal */
+[data-testid="stForm"] {
+    overflow: auto !important;
 }
 </style>
 """
@@ -812,4 +830,3 @@ if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
     main()
-
