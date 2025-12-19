@@ -88,7 +88,7 @@ def show_monthly_reports_summary(controller):
             with col5:
                 # ✅ Gunakan 'Photo URL' bukan 'photo_path'
                 if report.get('Photo URL') and os.path.exists(report['Photo URL']):
-                    if st.button("📷", key=f"view_monthly_{report['id']}", help="Lihat foto"):
+                    if st.button("Lihat", key=f"view_monthly_{report['id']}", help="Lihat foto"):
                         with st.expander(f"Foto - {report.get('Alamat', 'N/A')}"):
                             try:
                                 st.image(report['Photo URL'], use_column_width=True)
@@ -121,4 +121,5 @@ def format_time(time_string):
         return ""
     except:
         return ""
+
 
