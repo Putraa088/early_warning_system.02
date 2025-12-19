@@ -464,7 +464,7 @@ def setup_sidebar():
             
             # Submenu Harian
             is_harian_active = st.session_state.catatan_submenu_page == "Harian" or st.session_state.current_page == "Harian"
-            if st.button("📅 Harian", key="submenu_harian", use_container_width=True,
+            if st.button(" Harian", key="submenu_harian", use_container_width=True,
                         type="primary" if is_harian_active else "secondary"):
                 st.session_state.current_page = "Harian"
                 st.session_state.catatan_submenu_page = "Harian"
@@ -472,7 +472,7 @@ def setup_sidebar():
             
             # Submenu Bulanan
             is_bulanan_active = st.session_state.catatan_submenu_page == "Bulanan" or st.session_state.current_page == "Bulanan"
-            if st.button("📊 Bulanan", key="submenu_bulanan", use_container_width=True,
+            if st.button(" Bulanan", key="submenu_bulanan", use_container_width=True,
                         type="primary" if is_bulanan_active else "secondary"):
                 st.session_state.current_page = "Bulanan"
                 st.session_state.catatan_submenu_page = "Bulanan"
