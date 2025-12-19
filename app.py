@@ -373,9 +373,15 @@ h1,h2,h3{
 st.markdown(CSS_THEME, unsafe_allow_html=True)
 
 # ==================== INIT CONTROLLERS IN SESSION ====================
+# ==================== INIT CONTROLLERS IN SESSION ====================
 if 'controllers_initialized' not in st.session_state:
     try:
         print("🔄 Initializing controllers...")
+        
+        # Tunggu Streamlit session siap
+        import time
+        time.sleep(1)  # Beri waktu untuk session initialization
+        
         st.session_state.visitor_controller = VisitorController()
         st.session_state.flood_controller = FloodReportController()
         st.session_state.realtime_controller = RealTimeDataController()
@@ -468,7 +474,7 @@ def show_homepage():
     
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
     
-    st.markdown("### Tentang Sistem")
+    st.markdown("### Fitur Utama Sistem")
     
     col1, col2 = st.columns(2)
     
@@ -766,6 +772,36 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
     with col3:
         st.markdown("<p style='text-align: center; color: #9ca3af; font-size: 0.9rem;'>TINGGI<br>(0.8-1.0)</p>", unsafe_allow_html=True)
     
+    # Rekomendasi
+    st.markdown("###  Rekomendasi Tindakan")
+    
+    recommendations = {
+        'RENDAH': [
+            " **Kondisi Aman**: Tetap waspada terhadap perubahan cuaca",
+            " Simpan nomor darurat: 085156959561",
+            " Pantau update cuaca dan peringatan dari pihak berwenang",
+            " Pastikan saluran air di sekitar rumah dalam kondisi lancar",
+            " Laporkan jika melihat genangan air yang mengkhawatirkan"
+        ],
+        'MENENGAH': [
+            " **Status Siaga**: Tingkatkan kewaspadaan",
+            " Siapkan tas darurat berisi dokumen penting dan obat-obatan",
+            " Pastikan kendaraan dalam kondisi siap",
+            " Hindari area rendah dan tepi sungai",
+            " Hubungi pihak berwenang jika melihat tanda-tanda banjir"
+        ],
+        'TINGGI': [
+            " **Status Bahaya**: Segera lakukan tindakan!",
+            " SEGERA EVAKUASI ke tempat yang lebih tinggi",
+            " Matikan listrik dan gas di rumah",
+            " Hubungi nomor darurat: 085156959561",
+            " JANGAN berjalan di arus banjir"
+        ]
+    }
+    
+    for rec in recommendations.get(result['status'], []):
+        st.markdown(f"- {rec}")
+    
     # Detail Parameter
     with st.expander(" Detail Parameter Input", expanded=False):
         st.markdown("###  Parameter yang Dimasukkan")
@@ -782,7 +818,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<100 mm: HUJAN NORMAL")
         
         with col2:
-            st.metric(" Tinggi Air", f"{water_level:.2f} mdpl")
+            st.metric("💧 Tinggi Air", f"{water_level:.2f} mdpl")
             if water_level > 130:
                 st.error(">130 mdpl: TINGGI")
             elif water_level > 110:
