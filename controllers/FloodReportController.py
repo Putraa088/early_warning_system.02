@@ -19,21 +19,26 @@ class FloodReportController:
         self._ensure_upload_folder()
         print("✅ FloodReportController initialized")
     
-    def _initialize_google_sheets(self):
-        """Initialize Google Sheets connection"""
-        try:
-            print("🔄 Initializing Google Sheets connection...")
-            self.sheets_model = GoogleSheetsModel()
-            
-            if self.sheets_model and hasattr(self.sheets_model, 'client') and self.sheets_model.client:
-                print("✅ Google Sheets connected")
-            else:
-                print("⚠️ Google Sheets offline - using SQLite only")
-                self.sheets_model = None
-        except Exception as e:
-            print(f"⚠️ Google Sheets init error: {e}")
-            print("ℹ️ System will continue with SQLite only")
+def _initialize_google_sheets(self):
+    """Initialize Google Sheets connection dengan delay"""
+    try:
+        print("🔄 Initializing Google Sheets connection...")
+        
+        # Tunggu sebentar untuk pastikan Streamlit session siap
+        import time
+        time.sleep(0.5)
+        
+        self.sheets_model = GoogleSheetsModel()
+        
+        if self.sheets_model and hasattr(self.sheets_model, 'client') and self.sheets_model.client:
+            print("✅ Google Sheets connected")
+        else:
+            print("⚠️ Google Sheets offline - using SQLite only")
             self.sheets_model = None
+    except Exception as e:
+        print(f"⚠️ Google Sheets init error: {e}")
+        print("ℹ️ System will continue with SQLite only")
+        self.sheets_model = None
     
     def _ensure_upload_folder(self):
         """Ensure upload folder exists"""
@@ -226,3 +231,4 @@ class FloodReportController:
         return (self.sheets_model is not None and 
                 hasattr(self.sheets_model, 'client') and 
                 self.sheets_model.client is not None)
+
