@@ -4,7 +4,6 @@ import pandas as pd
 def show_prediction_dashboard(controller):
     """Display flood prediction dashboard with clean design"""
     
-    # Get predictions
     with st.spinner("Memuat data prediksi..."):
         predictions = controller.get_comprehensive_data()
     
@@ -12,10 +11,8 @@ def show_prediction_dashboard(controller):
         st.warning("Data prediksi tidak tersedia saat ini.")
         return
     
-    # Overall Risk Status
     overall_status, _ = controller.get_overall_risk_status(predictions)
     
-    # Status color
     if overall_status == "RENDAH":
         status_color = "success"
         status_icon = "✅"
@@ -26,7 +23,6 @@ def show_prediction_dashboard(controller):
         status_color = "error"
         status_icon = "🚨"
     
-    # Display overall status
     st.markdown(f"""
     <div style="background: {'#10b981' if overall_status == 'RENDAH' else '#f59e0b' if overall_status == 'MENENGAH' else '#ef4444'}; 
                 color: white; padding: 25px; border-radius: 10px; margin-bottom: 25px; text-align: center;">
@@ -35,7 +31,6 @@ def show_prediction_dashboard(controller):
     </div>
     """, unsafe_allow_html=True)
     
-    # Key metrics
     st.markdown("### Data Real-time")
     
     col1, col2, col3 = st.columns(3)
@@ -65,7 +60,6 @@ def show_prediction_dashboard(controller):
     
     st.markdown("---")
     
-    # Location details
     st.markdown("### Detail per Lokasi")
     
     for pred in predictions:
@@ -115,4 +109,3 @@ def show_prediction_dashboard(controller):
                     st.write(f"- Analisis: {pred['gumbel_message']}")
             
             st.markdown("---")
-            
