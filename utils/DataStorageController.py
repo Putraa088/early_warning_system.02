@@ -12,7 +12,6 @@ class DataStorageController:
         os.makedirs(self.daily_path, exist_ok=True)
         os.makedirs(self.monthly_path, exist_ok=True)
 
-    # ============= DAILY DATA (FORMAT A) =============
     def save_daily(self, data):
         today = datetime.date.today()
         filename = os.path.join(self.daily_path, f"{today}.json")
@@ -30,7 +29,6 @@ class DataStorageController:
         with open(filename, "r") as f:
             return json.load(f)
 
-    # ============= MONTHLY DATA (FORMAT C) =============
     def update_monthly(self, data):
         today = datetime.date.today()
         month_str = today.strftime("%Y-%m")
