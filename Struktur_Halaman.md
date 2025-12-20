@@ -1,39 +1,37 @@
 flood-monitoring-system/
 │
-├── app.py  # Main application entry point
+├── 📁 panduan/
+│   └── 📁 views/
+│       └── 📄 panduan_page.py
 │
-├── panduan/
-│   └── views/
-│       └── panduan_page.py  # Guide/help page
-│
-├── lapor_banjir/
-│   ├── views/
-│   │   └── flood_report_form.py  # Flood reporting form UI
+├── 📁 lapor_banjir/
+│   ├── 📁 views/
+│   │   └── 📄 flood_report_form.py
 │   │
-│   └── controllers/
-│       └── FloodReportController.py  # Controls flood report logic
+│   └── 📁 controllers/
+│       └── 📄 FloodReportController.py
 │           │
-│           └── models/
-│               ├── FloodReportModel.py  # Local database (SQLite) operations
-│               └── GoogleSheetsModel.py  # Cloud synchronization (Google Sheets)
+│           └── 📁 models/
+│               ├── 📄 FloodReportModel.py
+│               └── 📄 GoogleSheetsModel.py
 │
-├── catatan_laporan/
-│   ├── views/
-│   │   ├── flood_reports_table.py  # Daily reports table view
-│   │   └── monthly_reports.py  # Monthly reports view
+├── 📁 catatan_laporan/
+│   ├── 📁 views/
+│   │   ├── 📄 flood_reports_table.py
+│   │   └── 📄 monthly_reports.py
 │   │
-│   └── controllers/
-│       └── FloodReportController.py  # Shared controller for reports
+│   └── 📁 controllers/
+│       └── 📄 FloodReportController.py
 │
-├── prediksi_realtime/
-│   ├── views/
-│   │   └── prediction_dashboard.py  # Real-time prediction dashboard UI
+├── 📁 prediksi_realtime/
+│   ├── 📁 views/
+│   │   └── 📄 prediction_dashboard.py
 │   │
-│   └── controllers/
-│       └── RealTimeDataController.py  # Manages real-time data processing
+│   └── 📁 controllers/
+│       └── 📄 RealTimeDataController.py
 │           │
-│           ├── model_ann.py  # Artificial Neural Network for predictions
-│           └── gumbel_distribution.py  # Statistical analysis using Gumbel distribution
+│           ├── 📄 model_ann.py
+│           └── 📄 gumbel_distribution.py
 │
-└── simulasi_banjir/
-    └── model_ann.py  # Direct ANN model for flood simulations
+└── 📁 simulasi_banjir/
+    └── 📄 model_ann.py
