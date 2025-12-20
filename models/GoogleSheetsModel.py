@@ -27,7 +27,6 @@ class GoogleSheetsModel:
             
             credentials_data = None
             
-            # Coba dari Streamlit Secrets (Cloud)
             if hasattr(st, 'secrets') and 'GOOGLE_SHEETS' in st.secrets:
                 print("🔑 Using Streamlit Secrets")
                 gs_secrets = st.secrets['GOOGLE_SHEETS']
@@ -47,7 +46,6 @@ class GoogleSheetsModel:
                 
                 print(f"✅ Loaded from Streamlit Secrets")
                 
-            # Fallback ke credentials.json (Local)
             elif os.path.exists('credentials.json'):
                 print("🔑 Using credentials.json")
                 with open('credentials.json', 'r') as f:
@@ -59,23 +57,19 @@ class GoogleSheetsModel:
                 self.client = None
                 return
             
-            # Authorize
             creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_data, scope)
             self.client = gspread.authorize(creds)
             print("✅ Google Sheets API authorized")
             
-            # Get spreadsheet ID
             spreadsheet_id = None
             if hasattr(st, 'secrets') and 'GOOGLE_SHEETS' in st.secrets and 'SPREADSHEET_ID' in st.secrets['GOOGLE_SHEETS']:
                 spreadsheet_id = st.secrets['GOOGLE_SHEETS']['SPREADSHEET_ID']
             else:
                 spreadsheet_id = "1wdys3GzfDfl0ohCQjUHRyJVbKQcM0VSIMgCryHB0-mc"
             
-            # Open spreadsheet
             self.spreadsheet = self.client.open_by_key(spreadsheet_id)
             print(f"✅ Spreadsheet opened: {self.spreadsheet.title}")
             
-            # Get worksheet
             self.worksheet = self.spreadsheet.worksheet('flood_reports')
             print(f"✅ Worksheet ready: {self.worksheet.title}")
             
@@ -90,25 +84,22 @@ class GoogleSheetsModel:
                 print("❌ Worksheet not available")
                 return False
             
-            # Waktu WIB
             current_time_wib = datetime.now(self.tz_wib)
             timestamp_wib = current_time_wib.strftime("%Y-%m-%d %H:%M:%S")
             
             print(f"📊 Saving to Google Sheets...")
             
-            # Row data
             row = [
-                timestamp_wib,                      # A: Timestamp
-                str(report_data.get('address', '')),     # B: Alamat
-                str(report_data.get('flood_height', '')), # C: Tinggi Banjir
-                str(report_data.get('reporter_name', '')), # D: Nama Pelapor
-                str(report_data.get('reporter_phone', '')), # E: No HP
-                str(report_data.get('ip_address', '')),   # F: IP Address
-                str(report_data.get('photo_url', '')),    # G: Photo URL
-                'pending'                           # H: Status
+                timestamp_wib,                      
+                str(report_data.get('address', '')),     
+                str(report_data.get('flood_height', '')), 
+                str(report_data.get('reporter_name', '')), 
+                str(report_data.get('reporter_phone', '')), 
+                str(report_data.get('ip_address', '')),   
+                str(report_data.get('photo_url', '')),    
+                'pending'                           
             ]
             
-            # Append row
             self.worksheet.append_row(row)
             print("✅ Saved to Google Sheets!")
             return True
