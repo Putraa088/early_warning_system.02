@@ -38,7 +38,6 @@ def show_current_month_reports(controller):
     """, unsafe_allow_html=True)
     
     try:
-        # Get today's reports dari controller
         reports = controller.get_today_reports()
     except AttributeError as e:
         st.error(f"❌ Error: Controller tidak memiliki method get_today_reports()")
@@ -54,57 +53,45 @@ def show_current_month_reports(controller):
     
     st.markdown("---")
     
-    # Header
     st.markdown(f"###  Daftar Laporan Hari Ini ({len(reports)} laporan)")
     
-    # Display reports
     for i, report in enumerate(reports, 1):
         with st.container():
             st.markdown('<div class="report-card">', unsafe_allow_html=True)
             
-            # Grid layout baru: 5 kolom tanpa ID
             col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 2])
             
             with col1:
-                # Alamat
                 address = report.get('Alamat', report.get('alamat', 'N/A'))
                 st.write(f"**{i}. {address}**")
                 
-                # Timestamp dengan format yang sama seperti di rekapan bulanan
                 timestamp = report.get('Timestamp', '')
                 if timestamp:
-                    # Format: "Hari, Tanggal Bulan Tahun Jam:Menit"
                     formatted_time = format_timestamp_for_display(timestamp)
                     st.markdown(f'<span class="timestamp-badge"> {formatted_time}</span>', 
                             unsafe_allow_html=True)
                 else:
-                    # Fallback ke report_time jika Timestamp tidak ada
                     time_display = format_time(report.get('report_time', ''))
                     if time_display:
                         st.markdown(f'<span class="timestamp-badge"> {time_display}</span>', 
                                 unsafe_allow_html=True)
             
             with col2:
-                # Tinggi Banjir
                 flood_height = report.get('Tinggi Banjir', report.get('tinggi_banjir', 'N/A'))
                 st.write(f"**{flood_height}**")
             
             with col3:
-                # Tanggal
                 date_display = format_date(report.get('report_date', ''))
                 st.write(date_display)
             
             with col4:
-                # Nama Pelapor
                 reporter_name = report.get('Nama Pelapor', report.get('nama_pelapor', 'N/A'))
                 st.write(reporter_name)
             
             with col5:
-                # Foto
                 photo_url = report.get('Photo URL', report.get('photo_url', ''))
                 
                 if photo_url:
-                    # Check jika foto ada
                     if os.path.exists(str(photo_url)):
                         if st.button("Lihat", key=f"view_{i}", use_container_width=True):
                             with st.expander(f"Foto - {address[:30]}...", expanded=True):
@@ -113,7 +100,6 @@ def show_current_month_reports(controller):
                                 except Exception as e:
                                     st.warning(f"Gagal menampilkan foto: {e}")
                     elif 'drive.google.com' in str(photo_url):
-                        # Google Drive URL
                         if st.button("🔗 Buka", key=f"drive_{i}", use_container_width=True):
                             st.markdown(f"[📎 Buka Foto di Google Drive]({photo_url})")
                     else:
@@ -123,23 +109,19 @@ def show_current_month_reports(controller):
             
             st.markdown('</div>', unsafe_allow_html=True)
         
-        # Divider antar laporan
         if i < len(reports):
             st.divider()
     
-    # Summary
     with st.expander(" Analisis Hari Ini", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Total Laporan", len(reports))
         with col2:
-            # Lokasi berbeda
             unique_locations = len(set(
                 r.get('Alamat', r.get('alamat', '')) for r in reports
             ))
             st.metric("Lokasi Berbeda", unique_locations)
         with col3:
-            # Pelapor berbeda
             unique_reporters = len(set(
                 r.get('Nama Pelapor', r.get('nama_pelapor', '')) for r in reports
             ))
@@ -151,9 +133,7 @@ def format_timestamp_for_display(timestamp):
         if not timestamp:
             return ""
         
-        # Parse timestamp (format: "2024-12-20 14:30:00")
         if isinstance(timestamp, str):
-            # Coba berbagai format timestamp
             formats_to_try = [
                 '%Y-%m-%d %H:%M:%S',
                 '%Y-%m-%d %H:%M',
@@ -168,22 +148,19 @@ def format_timestamp_for_display(timestamp):
                 except ValueError:
                     continue
             else:
-                # Jika semua format gagal, return asli
-                return timestamp[:16]  # Ambil 16 karakter pertama
+                return timestamp[:16]  
         else:
             dt = timestamp
         
-        # Format seperti di rekapan bulanan: "HH:MM"
         return dt.strftime('%H:%M')
         
     except Exception:
-        # Fallback: return bagian waktu saja
         if ' ' in str(timestamp):
             parts = str(timestamp).split(' ')
             if len(parts) > 1:
                 time_part = parts[1]
                 if ':' in time_part:
-                    return time_part[:5]  # HH:MM
+                    return time_part[:5]  
         return str(timestamp)[:5] if len(str(timestamp)) >= 5 else str(timestamp)
 
 def format_date(date_string):
@@ -192,13 +169,10 @@ def format_date(date_string):
         if not date_string:
             return "N/A"
         
-        # Parse date
         if isinstance(date_string, str):
-            # Coba format YYYY-MM-DD
             try:
                 date_obj = datetime.strptime(date_string, '%Y-%m-%d')
             except ValueError:
-                # Coba format lain
                 try:
                     date_obj = datetime.strptime(date_string, '%d/%m/%Y')
                 except ValueError:
@@ -221,7 +195,7 @@ def format_time(time_string):
         
         if isinstance(time_string, str):
             if ':' in time_string:
-                return time_string[:5]  # HH:MM
+                return time_string[:5]  
             return time_string
         else:
             return str(time_string)
