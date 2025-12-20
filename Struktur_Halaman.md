@@ -11,12 +11,14 @@
 # Tidak ada import khusus untuk Home
 # Semua kode langsung di dalam app.py
 
-📘 HALAMAN 2: PANDUAN
-File yang Digunakan:
+## 📘 **HALAMAN 2: PANDUAN**
+
+### **File yang Digunakan:**
 File	Tipe	Fungsi Utama
 views/panduan_page.py	View	show_panduan_page()
 app.py	Handler	show_panduan_page_handler()
-Import di app.py:
+
+### **Import di app.py:**
 python
 from views.panduan_page import show_panduan_page
 Menu di Sidebar:
