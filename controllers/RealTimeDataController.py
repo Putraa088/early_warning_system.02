@@ -1,19 +1,14 @@
-# controllers/RealTimeDataController.py
 import streamlit as st
 
-# ✅ IMPORT YANG DIPERLUKAN SAJA
 from model_ann import predict_flood_ann
-# Menghapus import gumbel_distribution karena tidak digunakan di controller ini
 
 class RealTimeDataController:
     def __init__(self):
-        # Tidak perlu BBWSScraper, gunakan fallback data
         pass
     
     def get_comprehensive_data(self):
         """Ambil semua data real-time dan lakukan prediksi"""
         try:
-            # ✅ GUNAKAN FALLBACK DATA LANGSUNG TANPA SCRAPING
             return self.get_fallback_predictions()
             
         except Exception as e:
@@ -84,4 +79,4 @@ class RealTimeDataController:
 
     def is_same_location(self, loc1, loc2):
         """Check jika dua lokasi sama (simple matching)"""
-        return True  # Untuk testing, anggap semua lokasi match
+        return True  
