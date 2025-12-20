@@ -1,32 +1,32 @@
 ## STRUKTUR HALAMAN WEBSITE
 
 **Home/**
-  📁 app.py
+  - 📁 app.py
 
 **Panduan/**
-  📁 views/
+  - 📁 views/
     - panduan_page.py
 
 **lapor_banjir/**
-  📁 views/
+  - 📁 views/
     - flood_report_form.py
-  📁 controllers/
+  - 📁 controllers/
     - FloodReportController.py
       - models/
         - FloodReportModel.py
         - GoogleSheetsModel.py
 
 **catatan_laporan/**
-  📁 views/
+  - 📁 views/
     - flood_reports_table.py
     - monthly_reports.py
-  📁 controllers/
+  - 📁 controllers/
     - FloodReportController.py
 
 **prediksi_realtime/**
-  📁 views/
+  - 📁 views/
     - prediction_dashboard.py
-  📁 controllers/
+  - 📁 controllers/
     - RealTimeDataController.py
       - model_ann.py
       - gumbel_distribution.py
