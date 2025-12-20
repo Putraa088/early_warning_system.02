@@ -7,15 +7,12 @@ class VisitorController:
     def track_visit(self, page_title=''):
         """Track page visit"""
         try:
-            # Get current page URL
             import streamlit as st
             page_url = st.experimental_get_query_params()
             page_url_str = str(page_url)
             
-            # Record visit
             self.visitor_model.record_visit(page_url_str)
             
-            # Update popular pages if page title provided
             if page_title:
                 self.visitor_model.update_popular_page(page_url_str, page_title)
                 
