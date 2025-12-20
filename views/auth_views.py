@@ -36,13 +36,11 @@ def show_login_form(auth_controller):
     </style>
     """, unsafe_allow_html=True)
     
-    # Initialize session state for auth tab
     if 'auth_tab' not in st.session_state:
         st.session_state.auth_tab = 'login'
     
     st.markdown('<div class="auth-container">', unsafe_allow_html=True)
     
-    # Header
     st.markdown("""
     <div class="auth-header">
         <h2 style="margin:0; color: white;">🔐 SISTEM BANJIR</h2>
@@ -50,7 +48,6 @@ def show_login_form(auth_controller):
     </div>
     """, unsafe_allow_html=True)
     
-    # Tabs
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🚀 Login", use_container_width=True, 
@@ -70,8 +67,8 @@ def show_login_form(auth_controller):
     else:
         _show_register_tab(auth_controller)
     
-    st.markdown('</div>', unsafe_allow_html=True)  # Close auth-form
-    st.markdown('</div>', unsafe_allow_html=True)  # Close auth-container
+    st.markdown('</div>', unsafe_allow_html=True)  
+    st.markdown('</div>', unsafe_allow_html=True)  
 
 def _show_login_tab(auth_controller):
     """Show login tab content"""
@@ -79,13 +76,13 @@ def _show_login_tab(auth_controller):
     
     with st.form("login_form"):
         email = st.text_input(
-            "📧 Email Address",
+            "Email Address",
             placeholder="contoh@email.com",
             help="Masukkan alamat email yang terdaftar"
         )
         
         password = st.text_input(
-            "🔒 Password", 
+            "Password", 
             type="password",
             placeholder="Masukkan password",
             help="Masukkan password akun Anda"
@@ -96,7 +93,7 @@ def _show_login_tab(auth_controller):
             remember_me = st.checkbox("Ingat saya")
         
         login_button = st.form_submit_button(
-            "🚀 Login ke Sistem", 
+            "Login ke Sistem", 
             use_container_width=True,
             type="primary"
         )
@@ -122,13 +119,13 @@ def _show_register_tab(auth_controller):
     
     with st.form("register_form"):
         full_name = st.text_input(
-            "👤 Nama Lengkap",
+            "Nama Lengkap",
             placeholder="Masukkan nama lengkap",
             help="Nama lengkap Anda"
         )
         
         email = st.text_input(
-            "📧 Email Address",
+            "Email Address",
             placeholder="contoh@email.com",
             help="Gunakan email yang valid"
         )
@@ -136,7 +133,7 @@ def _show_register_tab(auth_controller):
         col1, col2 = st.columns(2)
         with col1:
             password = st.text_input(
-                "🔒 Password",
+                "Password",
                 type="password",
                 placeholder="Minimal 6 karakter",
                 help="Password minimal 6 karakter"
@@ -144,7 +141,7 @@ def _show_register_tab(auth_controller):
         
         with col2:
             confirm_password = st.text_input(
-                "🔒 Konfirmasi Password",
+                "Konfirmasi Password",
                 type="password", 
                 placeholder="Ulangi password",
                 help="Harus sama dengan password"
@@ -153,7 +150,7 @@ def _show_register_tab(auth_controller):
         agree_terms = st.checkbox("Saya menyetujui syarat dan ketentuan")
         
         register_button = st.form_submit_button(
-            "📝 Daftar Akun Baru",
+            "Daftar Akun Baru",
             use_container_width=True,
             type="primary"
         )
