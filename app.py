@@ -336,22 +336,6 @@ h1,h2,h3{
     margin-bottom: 30px;
 }
 
-/* CSS untuk submenu */
-.submenu-container {
-    padding-left: 20px;
-    margin: 5px 0;
-}
-
-.submenu-button {
-    font-size: 15px !important;
-    padding: 10px 20px !important;
-    background: rgba(255,255,255,0.03) !important;
-}
-
-.submenu-button:hover {
-    background: rgba(0,174,230,0.05) !important;
-}
-
 /* HAPUS ATURAN OVERFLOW HIDDEN */
 .element-container, .st-emotion-cache-1p1nwyz {
     /* overflow: hidden !important; */ /* DIHAPUS */
@@ -414,16 +398,12 @@ def setup_sidebar():
         # Initialize session state untuk navigation
         if 'current_page' not in st.session_state:
             st.session_state.current_page = "Home"
-        if 'show_catatan_submenu' not in st.session_state:
-            st.session_state.show_catatan_submenu = False
-        if 'catatan_submenu_page' not in st.session_state:
-            st.session_state.catatan_submenu_page = None
-
-        # Menu utama
+        
+        # Menu utama (TANPA SUBMENU)
         menu_items = [
             ("Home", "Home"),
             ("Lapor Banjir", "Lapor Banjir"),
-            ("Catatan Laporan", "Catatan Laporan"),
+            ("Catatan Laporan", "Catatan Laporan"),  # SEKARANG MENU BIASA
             ("Prediksi Real-time", "Prediksi Banjir"),
             ("Kalkulator Banjir", "Kalkulator Banjir")
         ]
@@ -431,54 +411,14 @@ def setup_sidebar():
         st.markdown('<div style="margin: 10px 0;">', unsafe_allow_html=True)
         
         for text, page in menu_items:
-            is_active = False
-            if page == "Catatan Laporan":
-                # Cek apakah halaman aktif adalah submenu dari Catatan Laporan
-                is_active = st.session_state.current_page in ["Catatan Laporan", "Harian", "Bulanan"]
-            else:
-                is_active = st.session_state.current_page == page
+            is_active = st.session_state.current_page == page
             
             if st.button(text, key=f"menu_{page}", use_container_width=True,
                         type="primary" if is_active else "secondary"):
-                if page == "Catatan Laporan":
-                    # Toggle submenu atau set ke mode submenu
-                    st.session_state.show_catatan_submenu = not st.session_state.show_catatan_submenu
-                    if st.session_state.show_catatan_submenu:
-                        st.session_state.current_page = "Catatan Laporan"
-                    else:
-                        # Jika sedang di submenu, kembali ke Catatan Laporan utama
-                        st.session_state.current_page = "Catatan Laporan"
-                        st.session_state.catatan_submenu_page = None
-                else:
-                    # Halaman biasa
-                    st.session_state.current_page = page
-                    st.session_state.show_catatan_submenu = False
-                    st.session_state.catatan_submenu_page = None
+                st.session_state.current_page = page
                 st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Tampilkan submenu jika Catatan Laporan aktif
-        if st.session_state.show_catatan_submenu:
-            st.markdown('<div class="submenu-container">', unsafe_allow_html=True)
-            
-            # Submenu Harian
-            is_harian_active = st.session_state.catatan_submenu_page == "Harian" or st.session_state.current_page == "Harian"
-            if st.button(" Harian", key="submenu_harian", use_container_width=True,
-                        type="primary" if is_harian_active else "secondary"):
-                st.session_state.current_page = "Harian"
-                st.session_state.catatan_submenu_page = "Harian"
-                st.rerun()
-            
-            # Submenu Bulanan
-            is_bulanan_active = st.session_state.catatan_submenu_page == "Bulanan" or st.session_state.current_page == "Bulanan"
-            if st.button(" Bulanan", key="submenu_bulanan", use_container_width=True,
-                        type="primary" if is_bulanan_active else "secondary"):
-                st.session_state.current_page = "Bulanan"
-                st.session_state.catatan_submenu_page = "Bulanan"
-                st.rerun()
-            
-            st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown("### Kontak")
         
@@ -816,9 +756,9 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
     if st.button("🔄 Uji Parameter Lain", use_container_width=True, type="secondary"):
         st.rerun()
 
-# ==================== CATATAN LAPORAN PAGE ====================
+# ==================== CATATAN LAPORAN PAGE (MENU PEMILIHAN) ====================
 def show_catatan_laporan_page():
-    """Halaman utama Catatan Laporan (untuk memilih submenu)"""
+    """Halaman utama Catatan Laporan (Menu pemilihan)"""
     st.markdown(
         """
         <div class="hero-section" style="padding: 30px; margin-bottom: 30px;">
@@ -836,22 +776,21 @@ def show_catatan_laporan_page():
     with col1:
         st.markdown(
             """
-            <div class="feature-card" style="cursor: pointer; text-align: center;" onclick="window.location.href='?page=Harian'">
+            <div class="feature-card" style="cursor: pointer; text-align: center;">
                 <h3> Harian</h3>
-                <p>laporan banjir yang tercatat hari ini</p>
+                <p>Laporan banjir yang tercatat hari ini</p>
             </div>
             """,
             unsafe_allow_html=True
         )
         if st.button("Lihat Laporan Harian", key="go_harian_from_main", use_container_width=True):
             st.session_state.current_page = "Harian"
-            st.session_state.catatan_submenu_page = "Harian"
             st.rerun()
     
     with col2:
         st.markdown(
             """
-            <div class="feature-card" style="cursor: pointer; text-align: center;" onclick="window.location.href='?page=Bulanan'">
+            <div class="feature-card" style="cursor: pointer; text-align: center;">
                 <h3> Bulanan</h3>
                 <p>Laporan dan Statistik Tahunan</p>
             </div>
@@ -860,12 +799,18 @@ def show_catatan_laporan_page():
         )
         if st.button("Lihat Rekapan Bulanan", key="go_bulanan_from_main", use_container_width=True):
             st.session_state.current_page = "Bulanan"
-            st.session_state.catatan_submenu_page = "Bulanan"
             st.rerun()
 
 # ==================== HARIAN PAGE (LAPORAN HARIAN) ====================
 def show_harian_page():
-    """Halaman Laporan Harian (sama dengan sebelumnya)"""
+    """Halaman Laporan Harian dengan tombol kembali"""
+    # Tombol Kembali di atas kiri
+    col1, col2, col3 = st.columns([1, 6, 1])
+    with col1:
+        if st.button("Kembali", key="back_from_harian", type="secondary"):
+            st.session_state.current_page = "Catatan Laporan"
+            st.rerun()
+    
     st.markdown(
         """
         <div class="hero-section" style="padding: 30px; margin-bottom: 30px;">
@@ -881,7 +826,14 @@ def show_harian_page():
 
 # ==================== BULANAN PAGE (REKAPAN BULANAN + STATISTIK 1 TAHUN) ====================
 def show_bulanan_page():
-    """Halaman Rekapan Bulanan dengan statistik 1 tahun"""
+    """Halaman Rekapan Bulanan dengan tombol kembali"""
+    # Tombol Kembali di atas kiri
+    col1, col2, col3 = st.columns([1, 6, 1])
+    with col1:
+        if st.button("Kembali", key="back_from_bulanan", type="secondary"):
+            st.session_state.current_page = "Catatan Laporan"
+            st.rerun()
+    
     st.markdown(
         """
         <div class="hero-section" style="padding: 30px; margin-bottom: 30px;">
@@ -1079,9 +1031,5 @@ def main():
 if __name__ == "__main__":
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Home"
-    if 'show_catatan_submenu' not in st.session_state:
-        st.session_state.show_catatan_submenu = False
-    if 'catatan_submenu_page' not in st.session_state:
-        st.session_state.catatan_submenu_page = None
     
     main()
