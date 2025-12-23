@@ -249,8 +249,7 @@ class FloodReportController:
                 'avg_per_month': round(avg_per_month, 1),
                 'max_month': max_month,
                 'max_count': max_count,
-                'current_year_month': current_date.strftime('%Y-%m'),
-                'source': 'Google Sheets'
+                'current_year_month': current_date.strftime('%Y-%m')
             }
             
         except Exception as e:
@@ -310,8 +309,7 @@ class FloodReportController:
                 'avg_per_month': round(total_reports / 12, 1) if total_reports > 0 else 0,
                 'max_month': "Estimasi" if total_reports > 0 else "Tidak ada data",
                 'max_count': reports_per_month + 1 if remainder > 0 else reports_per_month,
-                'current_year_month': current_date.strftime('%Y-%m'),
-                'source': 'SQLite (estimasi)'
+                'current_year_month': current_date.strftime('%Y-%m')
             }
             
         except Exception as e:
@@ -326,8 +324,7 @@ class FloodReportController:
             'avg_per_month': 0,
             'max_month': "Tidak ada data",
             'max_count': 0,
-            'current_year_month': datetime.now().strftime('%Y-%m') if hasattr(datetime, 'now') else "",
-            'source': 'Error'
+            'current_year_month': datetime.now().strftime('%Y-%m') if hasattr(datetime, 'now') else ""
         }
     
     def get_client_ip(self):
@@ -344,3 +341,4 @@ class FloodReportController:
         except Exception as e:
             print(f"⚠️ Error getting IP: {e}")
             return "unknown_user"
+
