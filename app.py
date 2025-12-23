@@ -861,31 +861,9 @@ def show_bulanan_page():
         st.markdown("### Statistik Laporan 1 Tahun")
         st.caption("Data historis laporan banjir selama 12 bulan terakhir")
         
-        # PERBAIKAN: Tambahkan error handling untuk get_yearly_statistics()
-        try:
+        # Tampilkan loading
+        with st.spinner("Mengambil data dari Google Sheets..."):
             yearly_stats = flood_controller.get_yearly_statistics()
-            
-            # Validasi data yang diterima
-            if not yearly_stats or 'months_data' not in yearly_stats:
-                st.error("❌ Gagal memuat statistik tahunan")
-                yearly_stats = {
-                    'months_data': [],
-                    'total_reports': 0,
-                    'avg_per_month': 0,
-                    'max_month': "Tidak ada data",
-                    'max_count': 0,
-                    'current_year_month': ""
-                }
-        except Exception as e:
-            st.error(f"❌ Error memuat statistik: {str(e)}")
-            yearly_stats = {
-                'months_data': [],
-                'total_reports': 0,
-                'avg_per_month': 0,
-                'max_month': "Error",
-                'max_count': 0,
-                'current_year_month': ""
-            }
         
         months_data = yearly_stats.get('months_data', [])
         
@@ -934,7 +912,7 @@ def show_bulanan_page():
             
             ax.set_xlabel('Bulan', fontsize=12)
             ax.set_ylabel('Jumlah Laporan', fontsize=12)
-            ax.set_title(f'Distribusi Laporan Banjir 12 Bulan Terakhir', fontsize=14, pad=20)
+            ax.set_title('Distribusi Laporan Banjir 12 Bulan Terakhir', fontsize=14, pad=20)
             ax.grid(axis='y', alpha=0.3)
             ax.set_axisbelow(True)
             
@@ -1009,7 +987,7 @@ def show_bulanan_page():
             zero_months = [month for month, count in zip(month_names, report_counts) if count == 0]
             if zero_months:
                 st.info(f"**Bulan tanpa laporan:** {', '.join(zero_months)}")
-
+                
 # ==================== PAGE HANDLERS LAINNYA ====================
 def show_flood_report_page():
     st.markdown(
@@ -1067,3 +1045,4 @@ if __name__ == "__main__":
         st.session_state.current_page = "Home"
     
     main()
+
