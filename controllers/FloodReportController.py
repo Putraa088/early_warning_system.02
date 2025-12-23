@@ -155,15 +155,39 @@ class FloodReportController:
     # ============ FUNGSI UNTUK VIEWS ============
     
     def get_today_reports(self):
-        """Get today's flood reports"""
+    """Get today's flood reports - PRIORITY: Google Sheets"""
+    try:
+        # Coba dari Google Sheets dulu
+        if self.sheets_model and self.sheets_model.client:
+            return self.get_today_reports_from_gsheets()
+        else:
+            return self.flood_model.get_today_reports()
+    except Exception as e:
+        print(f"⚠️ Error in get_today_reports: {e}")
         return self.flood_model.get_today_reports()
-    
+
     def get_month_reports(self):
-        """Get this month's flood reports"""
+    """Get this month's flood reports - PRIORITY: Google Sheets"""
+    try:
+        # Coba dari Google Sheets dulu
+        if self.sheets_model and self.sheets_model.client:
+            return self.get_month_reports_from_gsheets()
+        else:
+            return self.flood_model.get_month_reports()
+    except Exception as e:
+        print(f"⚠️ Error in get_month_reports: {e}")
         return self.flood_model.get_month_reports()
-    
+
     def get_all_reports(self):
-        """Get all flood reports"""
+    """Get all flood reports - PRIORITY: Google Sheets"""
+    try:
+        # Coba dari Google Sheets dulu
+        if self.sheets_model and self.sheets_model.client:
+            return self.get_all_reports_from_gsheets()
+        else:
+            return self.flood_model.get_all_reports()
+    except Exception as e:
+        print(f"⚠️ Error in get_all_reports: {e}")
         return self.flood_model.get_all_reports()
     
     def get_monthly_statistics(self):
@@ -185,6 +209,142 @@ class FloodReportController:
             print(f"❌ Error getting yearly statistics: {e}")
             traceback.print_exc()
             return self._get_empty_yearly_stats()
+
+    def get_month_reports_from_gsheets(self):
+    """Get this month's reports directly from Google Sheets"""
+    try:
+        if not self.sheets_model or not self.sheets_model.client:
+            print("⚠️ Google Sheets offline, using SQLite fallback")
+            return self.flood_model.get_month_reports()
+        
+        print("📊 Getting month reports from Google Sheets...")
+        
+        worksheet = self.sheets_model.worksheet
+        all_records = worksheet.get_all_records()
+        
+        if not all_records:
+            print("⚠️ No records in Google Sheets")
+            return []
+        
+        # Filter untuk bulan ini
+        from datetime import datetime
+        current_month = datetime.now().strftime("%Y-%m")
+        
+        month_reports = []
+        for record in all_records:
+            timestamp = record.get('Timestamp', '')
+            if timestamp and current_month in timestamp:
+                # Format data sesuai dengan format SQLite
+                month_reports.append({
+                    'id': len(month_reports) + 1,  # Generate ID
+                    'Alamat': record.get('Alamat', ''),
+                    'Tinggi Banjir': record.get('Tinggi Banjir', ''),
+                    'Nama Pelapor': record.get('Nama Pelapor', ''),
+                    'No HP': record.get('No HP', ''),
+                    'IP Address': record.get('IP Address', ''),
+                    'Photo URL': record.get('Photo URL', ''),
+                    'Status': record.get('Status', 'pending'),
+                    'Timestamp': record.get('Timestamp', ''),
+                    'report_date': timestamp[:10] if timestamp else '',
+                    'report_time': timestamp[11:19] if len(timestamp) > 10 else ''
+                })
+        
+        print(f"✅ Found {len(month_reports)} reports for current month")
+        return month_reports
+        
+    except Exception as e:
+        print(f"❌ Error getting month reports from Google Sheets: {e}")
+        return self.flood_model.get_month_reports()
+
+def get_today_reports_from_gsheets(self):
+    """Get today's reports directly from Google Sheets"""
+    try:
+        if not self.sheets_model or not self.sheets_model.client:
+            print("⚠️ Google Sheets offline, using SQLite fallback")
+            return self.flood_model.get_today_reports()
+        
+        print("📊 Getting today reports from Google Sheets...")
+        
+        worksheet = self.sheets_model.worksheet
+        all_records = worksheet.get_all_records()
+        
+        if not all_records:
+            print("⚠️ No records in Google Sheets")
+            return []
+        
+        # Filter untuk hari ini
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        
+        today_reports = []
+        for record in all_records:
+            timestamp = record.get('Timestamp', '')
+            if timestamp and today in timestamp:
+                # Format data sesuai dengan format SQLite
+                today_reports.append({
+                    'id': len(today_reports) + 1,  # Generate ID
+                    'Alamat': record.get('Alamat', ''),
+                    'Tinggi Banjir': record.get('Tinggi Banjir', ''),
+                    'Nama Pelapor': record.get('Nama Pelapor', ''),
+                    'No HP': record.get('No HP', ''),
+                    'IP Address': record.get('IP Address', ''),
+                    'Photo URL': record.get('Photo URL', ''),
+                    'Status': record.get('Status', 'pending'),
+                    'Timestamp': record.get('Timestamp', ''),
+                    'report_date': timestamp[:10] if timestamp else '',
+                    'report_time': timestamp[11:19] if len(timestamp) > 10 else ''
+                })
+        
+        print(f"✅ Found {len(today_reports)} reports for today")
+        return today_reports
+        
+    except Exception as e:
+        print(f"❌ Error getting today reports from Google Sheets: {e}")
+        return self.flood_model.get_today_reports()
+
+def get_all_reports_from_gsheets(self):
+    """Get all reports directly from Google Sheets"""
+    try:
+        if not self.sheets_model or not self.sheets_model.client:
+            print("⚠️ Google Sheets offline, using SQLite fallback")
+            return self.flood_model.get_all_reports()
+        
+        print("📊 Getting all reports from Google Sheets...")
+        
+        worksheet = self.sheets_model.worksheet
+        all_records = worksheet.get_all_records()
+        
+        if not all_records:
+            print("⚠️ No records in Google Sheets")
+            return []
+        
+        # Convert semua records
+        reports = []
+        for i, record in enumerate(all_records):
+            timestamp = record.get('Timestamp', '')
+            reports.append({
+                'id': i + 1,
+                'Alamat': record.get('Alamat', ''),
+                'Tinggi Banjir': record.get('Tinggi Banjir', ''),
+                'Nama Pelapor': record.get('Nama Pelapor', ''),
+                'No HP': record.get('No HP', ''),
+                'IP Address': record.get('IP Address', ''),
+                'Photo URL': record.get('Photo URL', ''),
+                'Status': record.get('Status', 'pending'),
+                'Timestamp': timestamp,
+                'report_date': timestamp[:10] if timestamp else '',
+                'report_time': timestamp[11:19] if len(timestamp) > 10 else ''
+            })
+        
+        # Sort by timestamp descending
+        reports.sort(key=lambda x: x.get('Timestamp', ''), reverse=True)
+        
+        print(f"✅ Found {len(reports)} total reports")
+        return reports
+        
+    except Exception as e:
+        print(f"❌ Error getting all reports from Google Sheets: {e}")
+        return self.flood_model.get_all_reports()
     
     def _get_yearly_stats_from_gsheets(self):
         """Get stats directly from Google Sheets"""
@@ -341,4 +501,5 @@ class FloodReportController:
         except Exception as e:
             print(f"⚠️ Error getting IP: {e}")
             return "unknown_user"
+
 
