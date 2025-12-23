@@ -79,4 +79,4 @@ class RealTimeDataController:
 
     def is_same_location(self, loc1, loc2):
         """Check jika dua lokasi sama (simple matching)"""
-        return True  
+        return True
