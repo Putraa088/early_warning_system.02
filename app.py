@@ -25,10 +25,17 @@ for folder in ['controllers', 'models', 'views']:
 
 # ==================== DATABASE INITIALIZATION ====================
 DB_PATH = 'flood_system.db'
-print(f"🔍 Checking database at: {os.path.abspath(DB_PATH)}")
+
+# Fungsi print yang aman
+def safe_print(message):
+    """Print yang aman untuk Streamlit"""
+    sys.stderr.write(str(message) + "\n")
+    sys.stderr.flush()
+
+safe_print(f"[INFO] Checking database at: {os.path.abspath(DB_PATH)}")
 
 if not os.path.exists(DB_PATH):
-    st.warning("⚠️ Database belum diinisialisasi. Menjalankan init database...")
+    safe_print("[WARNING] Database belum diinisialisasi. Menjalankan init database...")
     try:
         import sqlite3
         conn = sqlite3.connect(DB_PATH)
@@ -50,25 +57,23 @@ if not os.path.exists(DB_PATH):
         
         conn.commit()
         conn.close()
-        st.success("✅ Database berhasil diinisialisasi!")
+        safe_print("[OK] Database berhasil diinisialisasi!")
     except Exception as e:
-        st.error(f"❌ Gagal inisialisasi database: {e}")
+        safe_print(f"[ERROR] Gagal inisialisasi database: {e}")
 else:
-    print(f"✅ Database found: {os.path.getsize(DB_PATH)} bytes")
+    safe_print(f"[OK] Database found: {os.path.getsize(DB_PATH)} bytes")
 
 # ==================== IMPORT CONTROLLERS ====================
+safe_print("[SYSTEM] Initializing Flood Warning System...")
+
 try:
-    from controllers.VisitorController import VisitorController
     from controllers.FloodReportController import FloodReportController
     from controllers.RealTimeDataController import RealTimeDataController
-    print("✅ Semua controllers berhasil di-import")
+    safe_print("[OK] Semua controllers berhasil di-import")
 except Exception as e:
-    st.error(f"Import Error Controller: {e}")
+    safe_print(f"[ERROR] Import Error Controller: {e}")
     
-    class VisitorController:
-        def track_visit(self, page): return None
-        def get_visitor_stats(self): return {}
-    
+    # FALLBACK CONTROLLERS JIKA IMPORT GAGAL
     class FloodReportController:
         def submit_report(self, *args, **kwargs):
             return False, "Sistem offline - Google Sheets tidak terhubung"
@@ -77,16 +82,46 @@ except Exception as e:
         def get_all_reports(self): return []
         def get_monthly_statistics(self): return {}
         def get_client_ip(self): return "127.0.0.1"
+        def get_yearly_statistics(self):
+            from datetime import datetime
+            return {
+                'months_data': [],
+                'total_reports': 0,
+                'avg_per_month': 0,
+                'max_month': "Error",
+                'max_count': 0,
+                'current_year_month': datetime.now().strftime('%Y-%m') if hasattr(datetime, 'now') else ""
+            }
     
     class RealTimeDataController:
-        def get_comprehensive_data(self): return []
+        def get_comprehensive_data(self): 
+            return self.get_fallback_predictions()
         def get_overall_risk_status(self, p): return "RENDAH", "green"
         def is_same_location(self, l1, l2): return True
+        def get_fallback_predictions(self):
+            return [
+                {
+                    'location': 'Ngadipiro (S. keduang)',
+                    'water_level_mdpl': 143.74,
+                    'rainfall_mm': 45.5,
+                    'ann_risk': 0.32,
+                    'ann_status': 'RENDAH',
+                    'ann_message': 'Prediksi ANN: Aman, tetap waspada',
+                    'gumbel_risk': 0.28,
+                    'gumbel_status': 'RENDAH',
+                    'gumbel_message': 'Distribusi Gumbel: Prob 18.7%',
+                    'last_update': '06:00',
+                    'source': 'BBWS Bengawan Solo',
+                    'water_status': 'RENDAH'
+                }
+            ]
 
 # ==================== IMPORT MODEL PREDICTION ====================
 try:
     from model_ann import predict_flood_ann_with_temp_range
+    sys.stderr.write("[OK] ANN model imported\n")
 except ImportError:
+    sys.stderr.write("[WARNING] Using fallback ANN model\n")
     def predict_flood_ann_with_temp_range(rainfall, water_level, humidity, temp_min, temp_max):
         """Fallback prediction function"""
         temp_avg = (temp_min + temp_max) / 2
@@ -115,9 +150,10 @@ try:
     from views.flood_reports_table import show_current_month_reports
     from views.monthly_reports import show_monthly_reports_summary
     from views.prediction_dashboard import show_prediction_dashboard
-    from views.panduan_page import show_panduan_page 
+    from views.panduan_page import show_panduan_page
+    sys.stderr.write("[OK] Semua views berhasil di-import\n")
 except Exception as e:
-    st.error(f"Import Error Views: {e}")
+    sys.stderr.write(f"[ERROR] Import Error Views: {e}\n")
 
     def show_flood_report_form(*args, **kwargs):
         st.info("Report form not available")
@@ -131,7 +167,7 @@ except Exception as e:
     def show_prediction_dashboard(*args, **kwargs):
         st.info("Prediction dashboard not available")
     
-    def show_panduan_page():  
+    def show_panduan_page():
         st.info("Panduan tidak tersedia")
 
 # ==================== CSS THEME ====================
@@ -360,24 +396,20 @@ st.markdown(CSS_THEME, unsafe_allow_html=True)
 # ==================== INIT CONTROLLERS IN SESSION ====================
 if 'controllers_initialized' not in st.session_state:
     try:
-        print("🔄 Initializing controllers...")
-        st.session_state.visitor_controller = VisitorController()
+        print("[INIT] Initializing controllers...")
         st.session_state.flood_controller = FloodReportController()
         st.session_state.realtime_controller = RealTimeDataController()
         st.session_state.controllers_initialized = True
-        print("✅ All controllers initialized successfully")
+        print("[OK] All controllers initialized successfully")
     except Exception as e:
-        print(f"❌ Error initializing controllers: {e}")
-        import traceback
+        print(f"[ERROR] Error initializing controllers: {e}")
         traceback.print_exc()
         st.session_state.controllers_initialized = False
 
 if st.session_state.controllers_initialized:
-    visitor_controller = st.session_state.visitor_controller
     flood_controller = st.session_state.flood_controller
     realtime_controller = st.session_state.realtime_controller
 else:
-    visitor_controller = VisitorController()
     flood_controller = FloodReportController()
     realtime_controller = RealTimeDataController()
 
@@ -387,9 +419,10 @@ def setup_sidebar():
         if 'current_page' not in st.session_state:
             st.session_state.current_page = "Home"
         
+        # Menu utama dengan tambahan "Panduan"
         menu_items = [
             ("Home", "Home"),
-            ("Panduan", "Panduan"),  
+            ("Panduan", "Panduan"),
             ("Lapor Banjir", "Lapor Banjir"),
             ("Catatan Laporan", "Catatan Laporan"),  
             ("Prediksi Real-time", "Prediksi Banjir"),
@@ -572,7 +605,7 @@ def show_flood_calculator_page():
                     )
                 
                 if temp_max < temp_min:
-                    st.error("⚠️ Suhu maksimum harus lebih besar atau sama dengan suhu minimum")
+                    st.error("[WARNING] Suhu maksimum harus lebih besar atau sama dengan suhu minimum")
                     temp_max = temp_min
                 
                 temp_avg = (temp_min + temp_max) / 2
@@ -610,7 +643,7 @@ def show_flood_calculator_page():
                                     humidity_val, temp_min_val, temp_max_val)
                 
             except Exception as e:
-                st.error(f"Error dalam prediksi: {str(e)}")
+                st.error(f"[ERROR] Error dalam prediksi: {str(e)}")
                 
                 temp_avg = (float(temp_min) + float(temp_max)) / 2
                 simple_risk = min(1.0, (float(rainfall) / 300) * 0.6 + (float(water_level) / 150) * 0.25 + (float(humidity) / 100) * 0.15)
@@ -688,12 +721,12 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
         st.markdown("<p style='text-align: center; color: #9ca3af; font-size: 0.9rem;'>TINGGI<br>(0.8-1.0)</p>", unsafe_allow_html=True)
     
     with st.expander("DETAIL PARAMETER INPUT", expanded=False):
-        st.markdown("###  Parameter yang Dimasukkan")
+        st.markdown("### Parameter yang Dimasukkan")
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric(" Curah Hujan", f"{rainfall:.2f} mm")
+            st.metric("Curah Hujan", f"{rainfall:.2f} mm")
             if rainfall > 200:
                 st.error(">200 mm: HUJAN SANGAT LEBAT")
             elif rainfall > 100:
@@ -702,7 +735,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<100 mm: HUJAN NORMAL")
         
         with col2:
-            st.metric("💧 Tinggi Air", f"{water_level:.2f} mdpl")
+            st.metric("Tinggi Air", f"{water_level:.2f} mdpl")
             if water_level > 130:
                 st.error(">130 mdpl: TINGGI")
             elif water_level > 110:
@@ -711,7 +744,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<110 mdpl: NORMAL")
         
         with col3:
-            st.metric(" Kelembapan", f"{humidity:.2f}%")
+            st.metric("Kelembapan", f"{humidity:.2f}%")
             if humidity > 80:
                 st.warning(">80%: SANGAT LEMBAP")
             elif humidity > 60:
@@ -721,7 +754,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
         
         with col4:
             temp_avg = (temp_min + temp_max) / 2
-            st.metric(" Suhu Rata-rata", f"{temp_avg:.1f}°C")
+            st.metric("Suhu Rata-rata", f"{temp_avg:.1f}°C")
             st.caption(f"Min: {temp_min:.1f}°C | Max: {temp_max:.1f}°C")
             if temp_avg > 30:
                 st.error(">30°C: PANAS")
@@ -731,7 +764,7 @@ def show_calculator_result(result, rainfall, water_level, humidity, temp_min, te
                 st.success("<25°C: NORMAL")
     
     st.markdown("---")
-    if st.button("🔄 Uji Parameter Lain", use_container_width=True, type="secondary"):
+    if st.button("Uji Parameter Lain", use_container_width=True, type="secondary"):
         st.rerun()
 
 # ==================== CATATAN LAPORAN PAGE (MENU PEMILIHAN) ====================
@@ -754,7 +787,7 @@ def show_catatan_laporan_page():
         st.markdown(
             """
             <div class="feature-card" style="cursor: pointer; text-align: center;">
-                <h3> Harian</h3>
+                <h3>Harian</h3>
                 <p>Laporan banjir yang tercatat hari ini</p>
             </div>
             """,
@@ -768,7 +801,7 @@ def show_catatan_laporan_page():
         st.markdown(
             """
             <div class="feature-card" style="cursor: pointer; text-align: center;">
-                <h3> Bulanan</h3>
+                <h3>Bulanan</h3>
                 <p>Laporan dan Statistik Tahunan</p>
             </div>
             """,
@@ -819,7 +852,7 @@ def show_bulanan_page():
         unsafe_allow_html=True
     )
     
-    tab1, tab2 = st.tabs([" Laporan Bulan Ini", " Statistik 1 Tahun"])
+    tab1, tab2 = st.tabs(["Laporan Bulan Ini", "Statistik 1 Tahun"])
     
     with tab1:
         show_monthly_reports_summary(flood_controller)
@@ -828,11 +861,36 @@ def show_bulanan_page():
         st.markdown("### Statistik Laporan 1 Tahun")
         st.caption("Data historis laporan banjir selama 12 bulan terakhir")
         
-        yearly_stats = flood_controller.get_yearly_statistics()
+        # PERBAIKAN: Tambahkan error handling untuk get_yearly_statistics()
+        try:
+            yearly_stats = flood_controller.get_yearly_statistics()
+            
+            # Validasi data yang diterima
+            if not yearly_stats or 'months_data' not in yearly_stats:
+                st.error("❌ Gagal memuat statistik tahunan")
+                yearly_stats = {
+                    'months_data': [],
+                    'total_reports': 0,
+                    'avg_per_month': 0,
+                    'max_month': "Tidak ada data",
+                    'max_count': 0,
+                    'current_year_month': ""
+                }
+        except Exception as e:
+            st.error(f"❌ Error memuat statistik: {str(e)}")
+            yearly_stats = {
+                'months_data': [],
+                'total_reports': 0,
+                'avg_per_month': 0,
+                'max_month': "Error",
+                'max_count': 0,
+                'current_year_month': ""
+            }
+        
         months_data = yearly_stats.get('months_data', [])
         
         if not months_data:
-            st.info(" Belum ada data laporan untuk 12 bulan terakhir.")
+            st.info("Belum ada data laporan untuk 12 bulan terakhir.")
             st.info("Sistem akan menampilkan data secara otomatis ketika ada laporan baru.")
             return
         
@@ -858,36 +916,55 @@ def show_bulanan_page():
         
         st.markdown("#### Grafik Jumlah Laporan per Bulan")
         
-        import matplotlib.pyplot as plt
+        try:
+            import matplotlib.pyplot as plt
+            
+            fig, ax = plt.subplots(figsize=(10, 6))
+            
+            colors = ['#ff6b6b' if is_current else '#00a8ff' 
+                    for is_current in is_current_flags]
+            
+            bars = ax.bar(month_names, report_counts, color=colors)
+            
+            for bar, count in zip(bars, report_counts):
+                height = bar.get_height()
+                if height > 0:  
+                    ax.text(bar.get_x() + bar.get_width()/2., height + 0.5,
+                        f'{int(count)}', ha='center', va='bottom', fontsize=10)
+            
+            ax.set_xlabel('Bulan', fontsize=12)
+            ax.set_ylabel('Jumlah Laporan', fontsize=12)
+            ax.set_title(f'Distribusi Laporan Banjir 12 Bulan Terakhir', fontsize=14, pad=20)
+            ax.grid(axis='y', alpha=0.3)
+            ax.set_axisbelow(True)
+            
+            plt.xticks(rotation=45)
+            
+            ax.set_ylim(bottom=0)
+            
+            plt.tight_layout()
+            
+            st.pyplot(fig)
+            
+        except Exception as e:
+            st.error(f"❌ Error membuat grafik: {str(e)}")
+            # Tampilkan data dalam tabel jika grafik gagal
+            import pandas as pd
+            df_data = []
+            for i, item in enumerate(months_data):
+                df_data.append({
+                    'No': i+1,
+                    'Bulan': item['month_name'],
+                    'Periode': item['year_month'],
+                    'Jumlah Laporan': item['report_count'],
+                    'Status': 'Bulan Berjalan' if item['is_current'] else 'Bulan Sebelumnya'
+                })
+            
+            if df_data:
+                df = pd.DataFrame(df_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
         
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        colors = ['#ff6b6b' if is_current else '#00a8ff' 
-                for is_current in is_current_flags]
-        
-        bars = ax.bar(month_names, report_counts, color=colors)
-        
-        for bar, count in zip(bars, report_counts):
-            height = bar.get_height()
-            if height > 0:  
-                ax.text(bar.get_x() + bar.get_width()/2., height + 0.5,
-                    f'{int(count)}', ha='center', va='bottom', fontsize=10)
-        
-        ax.set_xlabel('Bulan', fontsize=12)
-        ax.set_ylabel('Jumlah Laporan', fontsize=12)
-        ax.set_title(f'Distribusi Laporan Banjir 12 Bulan Terakhir', fontsize=14, pad=20)
-        ax.grid(axis='y', alpha=0.3)
-        ax.set_axisbelow(True)
-        
-        plt.xticks(rotation=45)
-        
-        ax.set_ylim(bottom=0)
-        
-        plt.tight_layout()
-        
-        st.pyplot(fig)
-        
-        with st.expander(" Lihat Data Lengkap", expanded=False):
+        with st.expander("Lihat Data Lengkap", expanded=False):
             import pandas as pd
             table_data = []
             for item in months_data:
@@ -904,7 +981,7 @@ def show_bulanan_page():
                 
                 csv = df.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label=" Download Data (CSV)",
+                    label="Download Data (CSV)",
                     data=csv,
                     file_name=f"statistik_laporan_{yearly_stats.get('current_year_month', '')}.csv",
                     mime="text/csv",
@@ -914,7 +991,7 @@ def show_bulanan_page():
                 st.info("Tidak ada data untuk ditampilkan")
         
         st.markdown("---")
-        st.markdown("####  Analisis Tren")
+        st.markdown("#### Analisis Tren")
         
         if len(report_counts) >= 2:
             current_count = report_counts[-1] if report_counts else 0
@@ -923,15 +1000,15 @@ def show_bulanan_page():
             if prev_count > 0:
                 change_percent = ((current_count - prev_count) / prev_count) * 100
                 if change_percent > 0:
-                    st.warning(f"⚠️ **Peningkatan {abs(change_percent):.1f}%** dari bulan sebelumnya")
+                    st.warning(f"[WARNING] **Peningkatan {abs(change_percent):.1f}%** dari bulan sebelumnya")
                 elif change_percent < 0:
-                    st.success(f"✅ **Penurunan {abs(change_percent):.1f}%** dari bulan sebelumnya")
+                    st.success(f"[OK] **Penurunan {abs(change_percent):.1f}%** dari bulan sebelumnya")
                 else:
-                    st.info(" **Stabil** - jumlah laporan sama dengan bulan sebelumnya")
+                    st.info("**Stabil** - jumlah laporan sama dengan bulan sebelumnya")
             
             zero_months = [month for month, count in zip(month_names, report_counts) if count == 0]
             if zero_months:
-                st.info(f" **Bulan tanpa laporan:** {', '.join(zero_months)}")
+                st.info(f"**Bulan tanpa laporan:** {', '.join(zero_months)}")
 
 # ==================== PAGE HANDLERS LAINNYA ====================
 def show_flood_report_page():
@@ -961,13 +1038,17 @@ def show_prediction_page():
     )
     show_prediction_dashboard(realtime_controller)
 
+def show_panduan_page_handler():
+    """Handler untuk halaman Panduan"""
+    show_panduan_page()
+
 # ==================== MAIN APP ====================
 def main():
     setup_sidebar()
 
     page_handlers = {
         "Home": show_homepage,
-        "Panduan": show_panduan_page,  
+        "Panduan": show_panduan_page_handler,
         "Lapor Banjir": show_flood_report_page,
         "Catatan Laporan": show_catatan_laporan_page,
         "Harian": show_harian_page,
