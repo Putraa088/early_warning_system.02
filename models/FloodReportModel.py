@@ -24,7 +24,7 @@ class FloodReportModel:
             return None
     
     def init_database(self):
-        """Initialize database dengan struktur baru"""
+        """Initialize database dengan struktur yang SIMPLE"""
         try:
             if os.path.exists(self.db_path):
                 print(f"ℹ️ Database exists: {os.path.getsize(self.db_path)} bytes")
@@ -35,6 +35,7 @@ class FloodReportModel:
             
             cursor = conn.cursor()
             
+            # BUAT TABEL SEDERHANA TANPA report_date
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS flood_reports (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,8 +47,6 @@ class FloodReportModel:
                     "IP Address" TEXT,
                     "Photo URL" TEXT,
                     "Status" TEXT DEFAULT 'pending',
-                    report_date DATE,
-                    report_time TIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -75,8 +74,6 @@ class FloodReportModel:
         try:
             current_time_wib = datetime.now(self.tz_wib)
             timestamp = current_time_wib.strftime("%Y-%m-%d %H:%M:%S")
-            report_date = current_time_wib.strftime("%Y-%m-%d")
-            report_time = current_time_wib.strftime("%H:%M:%S")
             
             print(f"📝 Creating report (WIB Time):")
             print(f"  Timestamp: {timestamp}")
@@ -97,9 +94,8 @@ class FloodReportModel:
             cursor.execute('''
                 INSERT INTO flood_reports 
                 ("Timestamp", "Alamat", "Tinggi Banjir", "Nama Pelapor", 
-                "No HP", "IP Address", "Photo URL", "Status",
-                report_date, report_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                "No HP", "IP Address", "Photo URL", "Status")
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 timestamp,
                 str(alamat) if alamat else "",
@@ -108,9 +104,7 @@ class FloodReportModel:
                 str(no_hp) if no_hp else None,
                 str(ip_address) if ip_address else "unknown",
                 str(photo_url) if photo_url else None,
-                'pending',
-                report_date,
-                report_time
+                'pending'
             ))
             
             conn.commit()
@@ -130,7 +124,7 @@ class FloodReportModel:
             return None
     
     def get_today_reports_count_by_ip(self, ip_address):
-        """Count today's reports by IP address"""
+        """Count today's reports by IP address - FIXED VERSION"""
         try:
             today = datetime.now(self.tz_wib).strftime("%Y-%m-%d")
             
@@ -139,10 +133,12 @@ class FloodReportModel:
                 return 0
             
             cursor = conn.cursor()
+            
+            # Gunakan Timestamp untuk filtering
             cursor.execute('''
                 SELECT COUNT(*) FROM flood_reports 
-                WHERE "IP Address" = ? AND report_date = ?
-            ''', (ip_address, today))
+                WHERE "IP Address" = ? AND "Timestamp" LIKE ?
+            ''', (ip_address, f'{today}%'))
             
             count = cursor.fetchone()[0]
             conn.close()
@@ -155,7 +151,7 @@ class FloodReportModel:
             return 0
     
     def get_today_reports(self):
-        """Get today's reports"""
+        """Get today's reports - FIXED VERSION"""
         try:
             today = datetime.now(self.tz_wib).strftime("%Y-%m-%d")
             
@@ -166,9 +162,9 @@ class FloodReportModel:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM flood_reports 
-                WHERE report_date = ?
+                WHERE "Timestamp" LIKE ?
                 ORDER BY "Timestamp" DESC
-            ''', (today,))
+            ''', (f'{today}%',))
             
             rows = cursor.fetchall()
             conn.close()
@@ -184,8 +180,6 @@ class FloodReportModel:
                     'IP Address': row['IP Address'],
                     'Photo URL': row['Photo URL'],
                     'Status': row['Status'],
-                    'report_date': row['report_date'],
-                    'report_time': row['report_time'],
                     'Timestamp': row['Timestamp']
                 })
             
@@ -197,7 +191,7 @@ class FloodReportModel:
             return []
     
     def get_month_reports(self):
-        """Get this month's reports"""
+        """Get this month's reports - FIXED VERSION"""
         try:
             current_month = datetime.now(self.tz_wib).strftime("%Y-%m")
             
@@ -208,9 +202,9 @@ class FloodReportModel:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT * FROM flood_reports 
-                WHERE strftime('%Y-%m', report_date) = ?
+                WHERE "Timestamp" LIKE ?
                 ORDER BY "Timestamp" DESC
-            ''', (current_month,))
+            ''', (f'{current_month}%',))
             
             rows = cursor.fetchall()
             conn.close()
@@ -226,8 +220,6 @@ class FloodReportModel:
                     'IP Address': row['IP Address'],
                     'Photo URL': row['Photo URL'],
                     'Status': row['Status'],
-                    'report_date': row['report_date'],
-                    'report_time': row['report_time'],
                     'Timestamp': row['Timestamp']
                 })
             
@@ -272,7 +264,7 @@ class FloodReportModel:
             return []
     
     def get_monthly_statistics(self):
-        """Get monthly statistics"""
+        """Get monthly statistics - FIXED VERSION"""
         try:
             current_month = datetime.now(self.tz_wib).strftime("%Y-%m")
             
@@ -283,8 +275,8 @@ class FloodReportModel:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT COUNT(*) FROM flood_reports 
-                WHERE strftime('%Y-%m', report_date) = ?
-            ''', (current_month,))
+                WHERE "Timestamp" LIKE ?
+            ''', (f'{current_month}%',))
             
             total = cursor.fetchone()[0]
             conn.close()
