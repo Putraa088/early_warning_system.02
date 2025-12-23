@@ -51,7 +51,7 @@ class FloodReportController:
             return True
     
     def submit_report(self, address, flood_height, reporter_name, reporter_phone=None, photo_file=None):
-        """Submit new flood report dengan struktur baru"""
+        """Submit new flood report"""
         photo_url = None
         photo_filename = None
         
@@ -85,7 +85,6 @@ class FloodReportController:
                     print(f"⚠️ Error saving photo: {e}")
                     photo_url = None
                     photo_filename = None
-            
             
             report_id = self.flood_model.create_report(
                 alamat=address,  
@@ -151,14 +150,13 @@ class FloodReportController:
             
             return False, f"❌ Error sistem: {str(e)}"
     
-    # ============ FUNGSI UNTUK VIEWS ============
+    # ============ FUNGSI OTOMATIS TANPA MANUAL INPUT ============
     
     def get_today_reports(self):
-        """Get today's flood reports - PRIORITY: Google Sheets"""
+        """Get today's flood reports - OTOMATIS"""
         try:
-            # Coba dari Google Sheets dulu
             if self.sheets_model and self.sheets_model.client:
-                return self.get_today_reports_from_gsheets()
+                return self._get_filtered_reports_from_gsheets('today')
             else:
                 return self.flood_model.get_today_reports()
         except Exception as e:
@@ -166,11 +164,10 @@ class FloodReportController:
             return self.flood_model.get_today_reports()
     
     def get_month_reports(self):
-        """Get this month's flood reports - PRIORITY: Google Sheets"""
+        """Get this month's flood reports - OTOMATIS"""
         try:
-            # Coba dari Google Sheets dulu
             if self.sheets_model and self.sheets_model.client:
-                return self.get_month_reports_from_gsheets()
+                return self._get_filtered_reports_from_gsheets('month')
             else:
                 return self.flood_model.get_month_reports()
         except Exception as e:
@@ -178,11 +175,10 @@ class FloodReportController:
             return self.flood_model.get_month_reports()
     
     def get_all_reports(self):
-        """Get all flood reports - PRIORITY: Google Sheets"""
+        """Get all flood reports - OTOMATIS"""
         try:
-            # Coba dari Google Sheets dulu
             if self.sheets_model and self.sheets_model.client:
-                return self.get_all_reports_from_gsheets()
+                return self._get_filtered_reports_from_gsheets('all')
             else:
                 return self.flood_model.get_all_reports()
         except Exception as e:
@@ -194,31 +190,26 @@ class FloodReportController:
         return self.flood_model.get_monthly_statistics()
     
     def get_yearly_statistics(self):
-        """Get yearly flood report statistics - READ DIRECTLY FROM GOOGLE SHEETS"""
+        """Get yearly statistics - OTOMATIS"""
         try:
-            # Coba baca dari Google Sheets
             if self.sheets_model and self.sheets_model.client:
-                print("📊 Getting yearly stats from Google Sheets...")
-                return self._get_yearly_stats_from_gsheets()
+                return self._get_yearly_stats_auto()
             else:
-                print("⚠️ Google Sheets offline, using SQLite fallback")
                 return self._get_yearly_stats_from_sqlite()
-                
         except Exception as e:
-            print(f"❌ Error getting yearly statistics: {e}")
-            traceback.print_exc()
+            print(f"❌ Error in get_yearly_statistics: {e}")
             return self._get_empty_yearly_stats()
     
-    # ============ GOOGLE SHEETS METHODS ============
+    # ============ CORE AUTOMATIC FUNCTIONS ============
     
-    def get_today_reports_from_gsheets(self):
-        """Get today's reports directly from Google Sheets"""
+    def _get_filtered_reports_from_gsheets(self, filter_type='all'):
+        """Get filtered reports from Google Sheets - FULLY AUTOMATIC"""
         try:
             if not self.sheets_model or not self.sheets_model.client:
-                print("⚠️ Google Sheets offline, using SQLite fallback")
-                return self.flood_model.get_today_reports()
+                print("⚠️ Google Sheets offline")
+                return []
             
-            print("📊 Getting today reports from Google Sheets...")
+            print(f"📊 Getting {filter_type} reports from Google Sheets...")
             
             worksheet = self.sheets_model.worksheet
             all_records = worksheet.get_all_records()
@@ -227,164 +218,160 @@ class FloodReportController:
                 print("⚠️ No records in Google Sheets")
                 return []
             
-            # Filter untuk hari ini
-            from datetime import datetime
-            today = datetime.now().strftime("%Y-%m-%d")
+            current_date = datetime.now()
+            filtered_reports = []
             
-            today_reports = []
-            for record in all_records:
-                timestamp = record.get('Timestamp', '')
-                if timestamp and today in timestamp:
-                    # Format data sesuai dengan format SQLite
-                    today_reports.append({
-                        'id': len(today_reports) + 1,
-                        'Alamat': record.get('Alamat', ''),
-                        'Tinggi Banjir': record.get('Tinggi Banjir', ''),
-                        'Nama Pelapor': record.get('Nama Pelapor', ''),
-                        'No HP': record.get('No HP', ''),
-                        'IP Address': record.get('IP Address', ''),
-                        'Photo URL': record.get('Photo URL', ''),
-                        'Status': record.get('Status', 'pending'),
-                        'Timestamp': record.get('Timestamp', ''),
-                        'report_date': timestamp[:10] if timestamp else '',
-                        'report_time': timestamp[11:19] if len(timestamp) > 10 else ''
-                    })
-            
-            print(f"✅ Found {len(today_reports)} reports for today")
-            return today_reports
-            
-        except Exception as e:
-            print(f"❌ Error getting today reports from Google Sheets: {e}")
-            return self.flood_model.get_today_reports()
-    
-    def get_month_reports_from_gsheets(self):
-        """Get this month's reports directly from Google Sheets"""
-        try:
-            if not self.sheets_model or not self.sheets_model.client:
-                print("⚠️ Google Sheets offline, using SQLite fallback")
-                return self.flood_model.get_month_reports()
-            
-            print("📊 Getting month reports from Google Sheets...")
-            
-            worksheet = self.sheets_model.worksheet
-            all_records = worksheet.get_all_records()
-            
-            if not all_records:
-                print("⚠️ No records in Google Sheets")
-                return []
-            
-            # Filter untuk bulan ini
-            from datetime import datetime
-            current_month = datetime.now().strftime("%Y-%m")
-            
-            month_reports = []
-            for record in all_records:
-                timestamp = record.get('Timestamp', '')
-                if timestamp and current_month in timestamp:
-                    # Format data sesuai dengan format SQLite
-                    month_reports.append({
-                        'id': len(month_reports) + 1,
-                        'Alamat': record.get('Alamat', ''),
-                        'Tinggi Banjir': record.get('Tinggi Banjir', ''),
-                        'Nama Pelapor': record.get('Nama Pelapor', ''),
-                        'No HP': record.get('No HP', ''),
-                        'IP Address': record.get('IP Address', ''),
-                        'Photo URL': record.get('Photo URL', ''),
-                        'Status': record.get('Status', 'pending'),
-                        'Timestamp': record.get('Timestamp', ''),
-                        'report_date': timestamp[:10] if timestamp else '',
-                        'report_time': timestamp[11:19] if len(timestamp) > 10 else ''
-                    })
-            
-            print(f"✅ Found {len(month_reports)} reports for current month")
-            return month_reports
-            
-        except Exception as e:
-            print(f"❌ Error getting month reports from Google Sheets: {e}")
-            return self.flood_model.get_month_reports()
-    
-    def get_all_reports_from_gsheets(self):
-        """Get all reports directly from Google Sheets"""
-        try:
-            if not self.sheets_model or not self.sheets_model.client:
-                print("⚠️ Google Sheets offline, using SQLite fallback")
-                return self.flood_model.get_all_reports()
-            
-            print("📊 Getting all reports from Google Sheets...")
-            
-            worksheet = self.sheets_model.worksheet
-            all_records = worksheet.get_all_records()
-            
-            if not all_records:
-                print("⚠️ No records in Google Sheets")
-                return []
-            
-            # Convert semua records
-            reports = []
             for i, record in enumerate(all_records):
                 timestamp = record.get('Timestamp', '')
-                reports.append({
-                    'id': i + 1,
-                    'Alamat': record.get('Alamat', ''),
-                    'Tinggi Banjir': record.get('Tinggi Banjir', ''),
-                    'Nama Pelapor': record.get('Nama Pelapor', ''),
-                    'No HP': record.get('No HP', ''),
-                    'IP Address': record.get('IP Address', ''),
-                    'Photo URL': record.get('Photo URL', ''),
-                    'Status': record.get('Status', 'pending'),
-                    'Timestamp': timestamp,
-                    'report_date': timestamp[:10] if timestamp else '',
-                    'report_time': timestamp[11:19] if len(timestamp) > 10 else ''
-                })
+                if not timestamp:
+                    continue
+                
+                timestamp_str = str(timestamp).strip()
+                
+                # OTOMATIS DETECT apakah data termasuk dalam filter
+                include_record = False
+                
+                if filter_type == 'all':
+                    include_record = True
+                
+                elif filter_type == 'month':
+                    # Cari data dengan bulan yang sama (tahun berapapun)
+                    current_month = current_date.strftime("%m")  # "12"
+                    
+                    # Cek berbagai format
+                    if f"-{current_month}-" in timestamp_str:  # "2025-12-20"
+                        include_record = True
+                    elif f"/{current_month}/" in timestamp_str:  # "20/12/2025"
+                        include_record = True
+                    elif current_date.strftime("%b") in timestamp_str:  # "Dec"
+                        include_record = True
+                
+                elif filter_type == 'today':
+                    # Cari data dengan tanggal hari ini
+                    today_str = current_date.strftime("%Y-%m-%d")
+                    
+                    if today_str in timestamp_str:  # "2025-12-20"
+                        include_record = True
+                    else:
+                        # Coba format lain: "20/12/2025"
+                        today_parts = today_str.split('-')
+                        today_alt = f"{today_parts[2]}/{today_parts[1]}/{today_parts[0]}"
+                        if today_alt in timestamp_str:
+                            include_record = True
+                
+                if include_record:
+                    # Format data secara konsisten
+                    filtered_reports.append({
+                        'id': i + 1,
+                        'Alamat': record.get('Alamat', ''),
+                        'Tinggi Banjir': record.get('Tinggi Banjir', ''),
+                        'Nama Pelapor': record.get('Nama Pelapor', ''),
+                        'No HP': record.get('No HP', ''),
+                        'IP Address': record.get('IP Address', ''),
+                        'Photo URL': record.get('Photo URL', ''),
+                        'Status': record.get('Status', 'pending'),
+                        'Timestamp': timestamp_str,
+                        'report_date': self._extract_date_from_timestamp(timestamp_str),
+                        'report_time': self._extract_time_from_timestamp(timestamp_str)
+                    })
             
             # Sort by timestamp descending
-            reports.sort(key=lambda x: x.get('Timestamp', ''), reverse=True)
+            filtered_reports.sort(key=lambda x: x.get('Timestamp', ''), reverse=True)
             
-            print(f"✅ Found {len(reports)} total reports")
-            return reports
+            print(f"✅ Found {len(filtered_reports)} {filter_type} reports")
+            return filtered_reports
             
         except Exception as e:
-            print(f"❌ Error getting all reports from Google Sheets: {e}")
-            return self.flood_model.get_all_reports()
-    
-    def _get_yearly_stats_from_gsheets(self):
-        """Get stats directly from Google Sheets"""
-        try:
-            from datetime import datetime, timedelta
+            print(f"❌ Error getting {filter_type} reports: {e}")
+            traceback.print_exc()
             
-            # Ambil data dari Google Sheets
+            # Fallback ke SQLite
+            if filter_type == 'today':
+                return self.flood_model.get_today_reports()
+            elif filter_type == 'month':
+                return self.flood_model.get_month_reports()
+            else:
+                return self.flood_model.get_all_reports()
+    
+    def _extract_date_from_timestamp(self, timestamp_str):
+        """Extract date from timestamp string automatically"""
+        try:
+            # Coba berbagai format
+            if '-' in timestamp_str and len(timestamp_str) >= 10:
+                return timestamp_str[:10]  # "2025-12-20"
+            elif '/' in timestamp_str:
+                parts = timestamp_str.split('/')
+                if len(parts) >= 3:
+                    return f"{parts[2]}-{parts[1]}-{parts[0]}"  # "20/12/2025" → "2025-12-20"
+            return timestamp_str[:10] if len(timestamp_str) >= 10 else ''
+        except:
+            return ''
+    
+    def _extract_time_from_timestamp(self, timestamp_str):
+        """Extract time from timestamp string automatically"""
+        try:
+            if len(timestamp_str) > 10 and ' ' in timestamp_str:
+                time_part = timestamp_str.split(' ')[1]
+                if ':' in time_part:
+                    return time_part[:8]  # "10:43:24"
+            return timestamp_str[11:19] if len(timestamp_str) > 10 else ''
+        except:
+            return ''
+    
+    def _get_yearly_stats_auto(self):
+        """Get yearly statistics - FULLY AUTOMATIC"""
+        try:
+            from datetime import datetime
+            
+            if not self.sheets_model or not self.sheets_model.client:
+                return self._get_yearly_stats_from_sqlite()
+            
             worksheet = self.sheets_model.worksheet
             all_records = worksheet.get_all_records()
             
-            print(f"📊 Found {len(all_records)} records in Google Sheets")
-            
             if not all_records:
-                print("⚠️ No records found in Google Sheets")
                 return self._get_empty_yearly_stats()
             
-            # Persiapan data
+            # OTOMATIS GROUP BY BULAN dari data yang ada
+            month_counts = {}
+            
+            for record in all_records:
+                timestamp = record.get('Timestamp', '')
+                if not timestamp:
+                    continue
+                
+                # OTOMATIS extract bulan dari timestamp
+                month_key = self._extract_month_from_timestamp(str(timestamp))
+                if month_key:
+                    month_counts[month_key] = month_counts.get(month_key, 0) + 1
+            
+            # Buat data untuk 12 bulan terakhir OTOMATIS
             current_date = datetime.now()
             months_data = []
             
-            # Hitung per bulan
-            for i in range(11, -1, -1):  # 12 bulan terakhir
+            # Dapatkan tahun dari data yang ada (ambil yang paling banyak)
+            data_year = self._detect_year_from_data(all_records) or current_date.year
+            
+            for i in range(11, -1, -1):
                 target_date = current_date - timedelta(days=30*i)
                 year_month = target_date.strftime('%Y-%m')
                 month_name = target_date.strftime('%b')
+                month_num = target_date.strftime('%m')
                 
-                # Hitung berapa record di bulan ini
-                count = 0
-                for record in all_records:
-                    timestamp = record.get('Timestamp', '')
-                    if timestamp and year_month in timestamp:
-                        count += 1
+                # Cari data untuk bulan ini
+                month_key = f"{data_year}-{month_num}" if data_year else month_num
+                report_count = month_counts.get(month_key, 0)
                 
-                is_current = (year_month == current_date.strftime('%Y-%m'))
+                # Jika tidak ada data untuk key lengkap, coba hanya bulan
+                if report_count == 0 and month_num in month_counts:
+                    report_count = month_counts[month_num]
+                
+                is_current = (month_num == current_date.strftime('%m'))
                 
                 months_data.append({
                     'year_month': year_month,
                     'month_name': month_name,
-                    'report_count': count,
+                    'report_count': report_count,
                     'is_current': is_current
                 })
             
@@ -393,7 +380,6 @@ class FloodReportController:
             total_reports = sum(report_counts)
             avg_per_month = total_reports / len(months_data) if months_data else 0
             
-            # Cari bulan dengan laporan terbanyak
             if months_data and any(report_counts):
                 max_item = max(months_data, key=lambda x: x['report_count'])
                 max_month = max_item['month_name']
@@ -402,7 +388,7 @@ class FloodReportController:
                 max_month = "Tidak ada data"
                 max_count = 0
             
-            print(f"✅ Google Sheets stats: {total_reports} total reports")
+            print(f"📊 Auto stats: {total_reports} reports, year detected: {data_year}")
             
             return {
                 'months_data': months_data,
@@ -414,8 +400,67 @@ class FloodReportController:
             }
             
         except Exception as e:
-            print(f"❌ Error reading Google Sheets: {e}")
+            print(f"❌ Error in auto stats: {e}")
             return self._get_yearly_stats_from_sqlite()
+    
+    def _extract_month_from_timestamp(self, timestamp_str):
+        """Extract month from timestamp automatically"""
+        try:
+            # Format: "2025-12-20" → "2025-12"
+            if '-' in timestamp_str:
+                parts = timestamp_str.split('-')
+                if len(parts) >= 2:
+                    return f"{parts[0]}-{parts[1]}"
+            
+            # Format: "20/12/2025" → "2025-12"
+            elif '/' in timestamp_str:
+                parts = timestamp_str.split('/')
+                if len(parts) >= 3:
+                    return f"{parts[2]}-{parts[1]}"
+            
+            # Format: "Dec 20, 2025" → "2025-12"
+            month_map = {
+                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+            }
+            
+            for month_name, month_num in month_map.items():
+                if month_name in timestamp_str:
+                    # Cari tahun
+                    import re
+                    year_match = re.search(r'\b(20\d{2})\b', timestamp_str)
+                    year = year_match.group(1) if year_match else datetime.now().year
+                    return f"{year}-{month_num}"
+            
+            return None
+            
+        except:
+            return None
+    
+    def _detect_year_from_data(self, all_records):
+        """Detect year from Google Sheets data automatically"""
+        try:
+            year_counts = {}
+            
+            for record in all_records:
+                timestamp = record.get('Timestamp', '')
+                if timestamp:
+                    # Cari tahun 20xx
+                    import re
+                    year_match = re.search(r'\b(20\d{2})\b', str(timestamp))
+                    if year_match:
+                        year = year_match.group(1)
+                        year_counts[year] = year_counts.get(year, 0) + 1
+            
+            # Return tahun dengan data terbanyak
+            if year_counts:
+                return max(year_counts, key=year_counts.get)
+            
+            return None
+            
+        except:
+            return None
     
     def _get_yearly_stats_from_sqlite(self):
         """Fallback: Get stats from SQLite"""
@@ -426,20 +471,17 @@ class FloodReportController:
             conn = sqlite3.connect('flood_system.db')
             cursor = conn.cursor()
             
-            # Cek apakah tabel ada
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='flood_reports'")
             if not cursor.fetchone():
                 conn.close()
                 return self._get_empty_yearly_stats()
             
-            # Hitung total
             cursor.execute("SELECT COUNT(*) FROM flood_reports")
             total_reports = cursor.fetchone()[0]
             
             current_date = datetime.now()
             months_data = []
             
-            # Distribusi per bulan (estimate)
             reports_per_month = total_reports // 12 if total_reports > 0 else 0
             remainder = total_reports % 12
             
@@ -448,9 +490,8 @@ class FloodReportController:
                 year_month = target_date.strftime('%Y-%m')
                 month_name = target_date.strftime('%b')
                 
-                # Estimasi distribusi
                 report_count = reports_per_month
-                if i < remainder:  # Sisa dibagi ke bulan terakhir
+                if i < remainder:
                     report_count += 1
                 
                 is_current = (year_month == current_date.strftime('%Y-%m'))
